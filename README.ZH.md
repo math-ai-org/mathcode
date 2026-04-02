@@ -1,6 +1,6 @@
-# Math Code
+# MathCode
 
-### Math Code: A Frontier Mathematical Coding Agent
+### MathCode: A Frontier Mathematical Coding Agent
 
 ```
 ███╗   ███╗ █████╗ ████████╗██╗  ██╗ ██████╗ ██████╗ ██████╗ ███████╗
@@ -15,7 +15,7 @@
 
 <p align="right"><strong>中文</strong> | <a href="./README.md">English</a></p>
 
-Math Code 是一个终端 AI 编程助手，内置数学形式化引擎。输入一道自然语言数学题，它会自动将其转化为 Lean 4 定理并尝试完成形式化证明。
+MathCode 是一个终端 AI 编程助手，内置数学形式化引擎。输入一道自然语言数学题，它会自动将其转化为 Lean 4 定理并尝试完成形式化证明。
 
 ![](./Demo.png) 
 
@@ -67,13 +67,13 @@ bash setup.sh
 
 `setup.sh` 自动完成：创建 `.env`、安装 Python 依赖、安装 Lean 工具链、下载 Mathlib 缓存。
 
-安装完成后，用 `./run` 启动 Math Code。
+安装完成后，用 `./run` 启动 MathCode。
 
 ### 4. 配置认证
 
 **方式一：Claude OAuth（推荐）**
 
-不需要修改 `.env`。启动 Math Code 后执行：
+不需要修改 `.env`。启动 MathCode 后执行：
 
 ```
 /login
@@ -149,13 +149,13 @@ ANTHROPIC_MODEL=claude-sonnet-4-20250514
 
 ### 示例
 
-在 Math Code 中输入：
+在 MathCode 中输入：
 
 ```
 Prove that for all integers n, if n is even then n^2 is even
 ```
 
-Math Code 会自动调用 AutoLeanFormalize。形式化完成后，终端显示：
+MathCode 会自动调用 AutoLeanFormalize。形式化完成后，终端显示：
 
 - 评分（A = 完全忠实，B = 基本忠实，C = 部分，D = 较差）
 - 绿色边框内的 Lean 代码（语法高亮）
@@ -262,13 +262,13 @@ LeanFormalizations/   # 形式化输出（运行后自动创建）
 
 **Q: 不做数学，只想用终端 Agent？**
 
-完全可以。Math Code 本身就是一个完整的终端 AI 助手，支持文件编辑、代码搜索、命令执行等所有常规功能。数学工具只在你输入数学题时自动激活。
+完全可以。MathCode 本身就是一个完整的终端 AI 助手，支持文件编辑、代码搜索、命令执行等所有常规功能。数学工具只在你输入数学题时自动激活。
 
 ---
 
 ## 致谢
 
-Math Code 的数学形式化与证明管线基于 [AUTOLEAN](https://github.com/T3S1AMAX/autolean.git) 项目。
+MathCode 的数学形式化与证明管线基于 [AUTOLEAN](https://github.com/T3S1AMAX/autolean.git) 项目。
 
 ## 说明
 
@@ -277,11 +277,11 @@ Math Code 的数学形式化与证明管线基于 [AUTOLEAN](https://github.com/
 - 如果跳过 Mathlib cache，首次编译任务会更慢
 
 ## Citation
-If you use Math Code in your research, please cite:
+If you use MathCode in your research, please cite:
 
 ```bibtex
 @misc{mathcode2026,
-  title     = {Math Code: A Frontier Mathematical Coding Agent},
+  title     = {MathCode: A Frontier Mathematical Coding Agent},
   author    = {Math-AI Team},
   year      = {2026},
   url       = {https://github.com/math-ai-org/mathcode}
