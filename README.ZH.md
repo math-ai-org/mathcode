@@ -273,3 +273,15 @@ Math Code 的数学形式化与证明管线基于 [AUTOLEAN](https://github.com/
 - 本项目仅供学习和研究用途
 - 数学工作流依赖 Claude API 访问权限和 Lean 编译环境
 - 如果跳过 Mathlib cache，首次编译任务会更慢
+
+## Citation
+If you use Math Code in your research, please cite:
+
+```bibtex
+@misc{mathcode2026,
+  title     = {Math Code: A Frontier Agentic Math Prover},
+  author    = {Math-AI Team},
+  year      = {2026},
+  url       = {https://github.com/math-ai-org/mathcode}
+}
+```
