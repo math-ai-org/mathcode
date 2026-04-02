@@ -40,8 +40,8 @@ brew install git-lfs   # macOS
 # apt install git-lfs  # Linux
 
 git lfs install
-git clone https://github.com/math-ai-org/mathcode-macOS.git
-cd mathcode-macOS
+git clone https://github.com/math-ai-org/mathcode.git
+cd mathcode
 ```
 
 > **Note:** If `./run` fails with `version: command not found`, the binary wasn't downloaded properly. Run `git lfs pull` to fetch the real file.
