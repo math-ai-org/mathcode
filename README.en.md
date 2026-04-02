@@ -11,211 +11,223 @@
 
 <p align="right"><a href="./README.md">中文</a> | <strong>English</strong></p>
 
-Math Code is a locally runnable terminal coding and math formalization assistant. It packages the terminal agent, AUTOLEAN, and a Lean workspace in a single repository so users can install once and immediately run the CLI, formalize math problems, and continue into Lean proof attempts.
+Math Code is a terminal AI coding assistant with a built-in math formalization engine. Give it a math problem in plain language and it will automatically convert it into a Lean 4 theorem and attempt a formal proof.
 
-The supported command name is `mathcode`. If older scripts, notes, or shell history still mention `claude` or any other legacy launcher name, replace them with `mathcode`.
+## Key Features
 
-## Overview
+- Interactive terminal UI (TUI)
+- `-p` / `--print` headless mode (scriptable)
+- Natural language math → Lean 4 theorem statement (auto-formalization)
+- Theorem statement → complete proof (auto-proving)
+- Compile-check-repair loop (up to 10 attempts)
+- Semantic fidelity grading (A/B/C/D)
+- Live display of LLM reasoning, Lean code, and compiler errors
+- Natural language proof explanation on demand
+- Claude OAuth login / API key authentication
+- MCP server and plugin support
 
-This repository already includes:
-- the terminal agent / TUI
-- `AUTOLEAN/`
-- `lean-workspace/`
-
-That means the default setup does not require:
-- a separate AUTOLEAN checkout
-- an external Lean project
-- a manual global Lean installation
-
-## Main Capabilities
-
-- Interactive terminal interface
-- `-p` / `--print` headless mode
-- Claude OAuth as the default login path
-- Optional Anthropic-compatible API endpoint support
-- Bundled AUTOLEAN formalization and proving workflow
-- In-repo Lean + Mathlib bootstrap
-- MCP, plugin, and Skills support
-- Recovery CLI fallback mode
+---
 
 ## Quick Start
 
-### 1. Install
+### 1. Requirements
 
-Run this from the repository root:
+- macOS (arm64) or Linux (x86_64)
+- Python 3.10+
+- ~2GB disk space (Lean + Mathlib cache needs an additional ~5GB)
 
-```bash
-bash scripts/setup-local.sh
-```
-
-The setup script will:
-- reuse system Bun if it already exists, otherwise install a project-local Bun in `.bun/`
-- install JavaScript dependencies
-- create `.env`
-- create `AUTOLEAN/.venv` and install Python dependencies
-- check for `lean` and `lake`
-- install a project-local Lean toolchain in `.local/elan/` if Lean is missing
-- initialize `lean-workspace/`
-- try to download the Mathlib cache
-
-Notes:
-- if disk space is low, the Mathlib cache step is skipped automatically
-- if the cache is skipped, the first Lean compile will be slower
-- you can skip it explicitly with:
+### 2. One-command setup
 
 ```bash
-MATHCODE_SKIP_MATHLIB_CACHE=1 bash scripts/setup-local.sh
+bash setup.sh
 ```
 
-### 2. Configure Authentication
+This script automatically:
+- Creates `.env` config file
+- Creates Python venv and installs AUTOLEAN dependencies
+- Installs Lean toolchain (if not already present)
+- Builds Lean workspace and downloads Mathlib cache
 
-Copy the template:
+### 3. Configure Authentication
 
-```bash
-cp .env.example .env
+**Option A: Claude OAuth (recommended)**
+
+Leave `.env` unchanged. After starting Math Code, run:
+
 ```
-
-Claude OAuth is the recommended default. That means you should leave these unset in `.env`:
-
-```env
-# ANTHROPIC_API_KEY=
-# ANTHROPIC_AUTH_TOKEN=
-# ANTHROPIC_BASE_URL=
-```
-
-Then start Math Code and run:
-
-```text
 /login
 ```
 
-Only set the following variables if you intentionally want to use a third-party Anthropic-compatible provider:
-- `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN`
-- `ANTHROPIC_BASE_URL`
-- `ANTHROPIC_MODEL`
+Follow the browser prompt to authorize.
 
-### 3. Start
+**Option B: API Key**
 
-Interactive mode:
+Set in `.env`:
 
-```bash
-./bin/mathcode
+```env
+ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-Common examples:
+**Option C: Third-party compatible endpoint**
 
-```bash
-./bin/mathcode -p "explain this repository"
-echo "hello" | ./bin/mathcode -p
-./bin/mathcode --help
+```env
+ANTHROPIC_API_KEY=your-key
+ANTHROPIC_BASE_URL=https://your-endpoint.com
+ANTHROPIC_MODEL=claude-sonnet-4-20250514
 ```
 
-If you need the simplified fallback CLI:
+### 4. Launch
 
 ```bash
-CLAUDE_CODE_FORCE_RECOVERY_CLI=1 ./bin/mathcode
+./run
 ```
+
+Common usage:
+
+```bash
+./run -p "prove that the square of an even number is even"
+./run --help
+```
+
+---
 
 ## Math Workflow
 
-The typical flow is:
+### Pipeline
 
-1. Run `mathcode`
-2. Sign in
-3. Enter a natural-language math problem
-4. Use `AutoLeanFormalize` first
-5. Use `AutoLeanProve` if you want to continue into proof generation
+```
+Natural language math problem
+    │
+    ▼
+┌─────────────────────────────┐
+│     AutoLeanFormalize       │
+│                             │
+│  1. LLM derives strategy    │
+│  2. Generate Lean 4 theorem │
+│  3. Compile → repair (≤6x)  │
+│  4. Semantic fidelity grade │
+└─────────────┬───────────────┘
+              │
+              ▼
+     Lean theorem + sorry
+              │
+              ▼
+┌─────────────────────────────┐
+│       AutoLeanProve         │
+│                             │
+│  1. Planner: proof strategy │
+│  2. Prover: proof code      │
+│  3. Compile → repair        │
+│  4. Replan on failure       │
+│  (up to 2 rounds × 5 each) │
+└─────────────┬───────────────┘
+              │
+              ▼
+      Complete Lean 4 proof
+```
 
-By default, the math tools use the bundled:
-- `AUTOLEAN/`
-- `lean-workspace/`
+### Example
 
-You only need to set override paths if you want custom locations:
-- `AUTOLEAN_DIR`
-- `LEAN_PROJECT_DIR`
-- `CLAUDE_CLI_CMD`
+Type into Math Code:
 
-## Proving Behavior
+```
+Prove that for all integers n, if n is even then n^2 is even
+```
 
-The current proving flow runs attempts sequentially for a single theorem. It does not run 5 proof attempts in parallel for the same theorem.
+Math Code automatically calls AutoLeanFormalize. When done, the terminal shows:
 
-Default parameters:
-- `attempts_before_replan = 5`
-- `max_plan_rounds = 2`
-- `workers = 1`
+- Grade (A = fully faithful, B = mostly, C = partial, D = poor)
+- Lean code in a green bordered box (syntax-highlighted)
+- Action menu:
+  - **Prove it** — proceed to automated proving
+  - **Retry formalization** — try a different approach
+  - **Done** — keep the formalization as-is
 
-In practice this means:
-- a single theorem gets up to `5 × 2 = 10` attempts by default
-- those attempts are sequential
-- `workers` only parallelizes across different Lean files
-- the same theorem is not proven by 5 parallel workers at once
+After proving:
+  - **Explain proof** — get a step-by-step natural language walkthrough
+  - **Retry proving** — try again
+  - **Done** — finished
+
+### Live Progress
+
+| Content | Style |
+|---|---|
+| Thinking/planning notes | Dimmed header + text |
+| Generated Lean code | Green rounded border + syntax highlighting |
+| Compiler errors | Red rounded border |
+| Status updates | `[AUTOLEAN]` prefix + bold |
+
+### Output Files
+
+Formalization results are saved to `LeanFormalizations/`:
+
+```
+LeanFormalizations/
+├── problem_xxx.lean          # Lean theorem + sorry
+├── problem_xxx.eval.json     # Semantic grade details
+└── problem_xxx_proven.lean   # Completed proof (if successful)
+```
+
+---
+
+## Proving Parameters
+
+| Parameter | Default | Description |
+|---|---|---|
+| `attempts_before_replan` | 5 | Attempts before asking the planner for a new strategy |
+| `max_plan_rounds` | 2 | Maximum replanning rounds |
+| `workers` | 1 | Parallel workers (across files, not same theorem) |
+
+---
 
 ## Environment Variables
 
 | Variable | Purpose |
-|------|------|
-| `ANTHROPIC_API_KEY` | API key mode |
-| `ANTHROPIC_AUTH_TOKEN` | Bearer token mode |
+|---|---|
+| `ANTHROPIC_API_KEY` | API key authentication |
+| `ANTHROPIC_AUTH_TOKEN` | Bearer token authentication |
 | `ANTHROPIC_BASE_URL` | Custom API endpoint |
 | `ANTHROPIC_MODEL` | Default model |
-| `ANTHROPIC_DEFAULT_SONNET_MODEL` | Sonnet model mapping |
-| `ANTHROPIC_DEFAULT_HAIKU_MODEL` | Haiku model mapping |
-| `ANTHROPIC_DEFAULT_OPUS_MODEL` | Opus model mapping |
-| `AUTOLEAN_DIR` | Override the bundled AUTOLEAN path |
-| `LEAN_PROJECT_DIR` | Override the bundled Lean workspace path |
-| `CLAUDE_CLI_CMD` | Override the `mathcode -p` command used by AUTOLEAN |
-| `API_TIMEOUT_MS` | API request timeout |
+| `AUTOLEAN_DIR` | Override bundled AUTOLEAN path |
+| `LEAN_PROJECT_DIR` | Override bundled Lean workspace path |
+| `CLAUDE_CLI_CMD` | Override the CLI command used by AUTOLEAN |
 | `DISABLE_TELEMETRY` | Disable telemetry |
-| `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` | Disable non-essential network traffic |
-| `MATHCODE_SKIP_MATHLIB_CACHE` | Skip Mathlib cache during setup |
 
-## Windows
+---
 
-`bin/mathcode` is a bash script, so on Windows you should start the app through Bun:
+## Directory Layout
 
-```powershell
-bun --env-file=.env ./src/entrypoints/cli.tsx
+```
+mathcode              # main executable
+run                   # launcher script
+setup.sh              # one-command setup (Lean + Python)
+.env.example          # config template
+AUTOLEAN/             # Python math formalization pipeline
+lean-workspace/       # Lean 4 + Mathlib compile workspace
+LeanFormalizations/   # formalization output (created at runtime)
 ```
 
-Headless mode:
+---
 
-```powershell
-bun --env-file=.env ./src/entrypoints/cli.tsx -p "your prompt here"
-```
+## FAQ
 
-Recovery CLI:
+**Q: Authentication fails on startup?**
 
-```powershell
-bun --env-file=.env ./src/localRecoveryCli.ts
-```
+Run `/login` to complete Claude OAuth, or set an API key in `.env`.
 
-## Project Structure
+**Q: Formalization / proving is slow?**
 
-```text
-bin/mathcode
-scripts/setup-local.sh
-.env.example
-AUTOLEAN/
-lean-workspace/
-src/
-├── entrypoints/cli.tsx
-├── main.tsx
-├── localRecoveryCli.ts
-├── setup.ts
-├── screens/
-├── tools/
-├── commands/
-├── skills/
-├── services/
-└── utils/
-```
+This is expected. Each iteration involves an LLM call + Lean compilation. Formalization typically takes 2-5 minutes, proving may need 5-15 minutes.
 
-## Common Uses
+**Q: `lake build` fails?**
 
-- running the terminal agent locally
-- turning natural-language math problems into Lean 4
-- performing Lean + Mathlib compile-check-repair loops
-- keeping the CLI, AUTOLEAN, and Lean workspace in one repository
+Run `bash setup.sh` to reinstall, or make sure elan is installed and on your PATH.
+
+**Q: Can I use it without math, just as a terminal agent?**
+
+Absolutely. Math Code is a full-featured terminal AI assistant supporting file editing, code search, command execution, and more. The math tools only activate when you input a math problem.
+
+---
 
 ## Acknowledgments
 

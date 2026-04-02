@@ -11,211 +11,223 @@
 
 <p align="right"><strong>中文</strong> | <a href="./README.en.md">English</a></p>
 
-Math Code 是一个本地可运行的终端代码与数学形式化助手。它把终端 Agent、AUTOLEAN 和 Lean 工作区打包在同一个仓库里，目标是让用户在一次安装后就能直接运行交互式 CLI、做数学题形式化、再继续进入 Lean 证明流程。
-
-默认命令名是 `mathcode`。如果旧脚本、旧文档或 shell history 里出现 `claude` 或其他历史启动名，请统一改成 `mathcode`。
-
-## 概览
-
-仓库内已经内置：
-- 终端 Agent / TUI
-- `AUTOLEAN/`
-- `lean-workspace/`
-
-这意味着默认情况下不需要：
-- 单独 checkout AUTOLEAN
-- 额外准备外部 Lean 项目
-- 手工全局安装 Lean 工具链
+Math Code 是一个终端 AI 编程助手，内置数学形式化引擎。输入一道自然语言数学题，它会自动将其转化为 Lean 4 定理并尝试完成形式化证明。
 
 ## 主要能力
 
-- 交互式终端界面
-- `-p` / `--print` 无头模式
-- Claude OAuth 默认登录流程
-- 可选接入 Anthropic 兼容 API
-- 内置 AUTOLEAN 数学形式化与证明工作流
-- 仓库内自举 Lean + Mathlib
-- 支持 MCP、插件和 Skills
-- 提供 Recovery CLI 作为兜底模式
+- 交互式终端界面（TUI）
+- `-p` / `--print` 无头模式（可嵌入脚本）
+- 自然语言数学题 → Lean 4 定理声明（自动形式化）
+- 定理声明 → 完整证明（自动证明）
+- 编译-检查-修复循环（最多 10 次尝试）
+- 语义忠实度评分（A/B/C/D）
+- 实时显示 LLM 思考过程、Lean 代码和编译器错误
+- 证明完成后可请求自然语言解释
+- Claude OAuth 登录 / API key 认证
+- MCP 服务器和插件支持
+
+---
 
 ## 快速开始
 
-### 1. 安装
+### 1. 系统要求
 
-在仓库根目录运行：
+- macOS (arm64) 或 Linux (x86_64)
+- Python 3.10+
+- 约 2GB 磁盘空间（Lean + Mathlib 缓存另需 ~5GB）
 
-```bash
-bash scripts/setup-local.sh
-```
-
-该脚本会自动完成：
-- 复用系统 Bun；如果系统没有，则安装仓库本地 `.bun/`
-- 安装 JavaScript 依赖
-- 生成 `.env`
-- 为 `AUTOLEAN/` 创建 `.venv` 并安装 Python 依赖
-- 检查 `lean` / `lake`
-- 如果系统没有 Lean，则安装仓库本地 `.local/elan/`
-- 初始化 `lean-workspace/`
-- 尝试下载 Mathlib cache
-
-说明：
-- 如果磁盘空间不足，Mathlib cache 会自动跳过
-- 跳过后第一次 Lean 编译会更慢
-- 如需显式跳过，可使用：
+### 2. 一键安装
 
 ```bash
-MATHCODE_SKIP_MATHLIB_CACHE=1 bash scripts/setup-local.sh
+bash setup.sh
 ```
 
-### 2. 配置认证
+该脚本自动完成：
+- 创建 `.env` 配置文件
+- 创建 Python venv 并安装 AUTOLEAN 依赖
+- 安装 Lean 工具链（如系统没有）
+- 构建 Lean 工作区并下载 Mathlib 缓存
 
-复制模板：
+### 3. 配置认证
 
-```bash
-cp .env.example .env
+**方式一：Claude OAuth（推荐）**
+
+不需要修改 `.env`。启动 Math Code 后执行：
+
 ```
-
-默认推荐使用 Claude OAuth。也就是说，不要在 `.env` 中设置下面这些变量：
-
-```env
-# ANTHROPIC_API_KEY=
-# ANTHROPIC_AUTH_TOKEN=
-# ANTHROPIC_BASE_URL=
-```
-
-启动后在 MathCode 内执行：
-
-```text
 /login
 ```
 
-如果你明确要接第三方 Anthropic 兼容端点，再手动设置：
-- `ANTHROPIC_API_KEY` 或 `ANTHROPIC_AUTH_TOKEN`
-- `ANTHROPIC_BASE_URL`
-- `ANTHROPIC_MODEL`
+按提示在浏览器中完成授权即可。
 
-### 3. 启动
+**方式二：API Key**
 
-交互模式：
+在 `.env` 中设置：
+
+```env
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+**方式三：第三方兼容端点**
+
+```env
+ANTHROPIC_API_KEY=your-key
+ANTHROPIC_BASE_URL=https://your-endpoint.com
+ANTHROPIC_MODEL=claude-sonnet-4-20250514
+```
+
+### 4. 启动
 
 ```bash
-./bin/mathcode
+./run
 ```
 
 常用形式：
 
 ```bash
-./bin/mathcode -p "explain this repository"
-echo "hello" | ./bin/mathcode -p
-./bin/mathcode --help
+./run -p "prove that the square of an even number is even"
+./run --help
 ```
 
-如果需要简化版 CLI：
-
-```bash
-CLAUDE_CODE_FORCE_RECOVERY_CLI=1 ./bin/mathcode
-```
+---
 
 ## 数学工作流
 
-典型流程如下：
+### 整体流程
 
-1. 运行 `mathcode`
-2. 完成登录
-3. 输入自然语言数学题目
-4. 先使用 `AutoLeanFormalize`
-5. 如有需要，再使用 `AutoLeanProve`
+```
+自然语言数学题
+    │
+    ▼
+┌─────────────────────────┐
+│   AutoLeanFormalize     │
+│                         │
+│  1. LLM 推导证明策略     │
+│  2. 生成 Lean 4 定理     │
+│  3. 编译 → 修复（≤6 轮） │
+│  4. 语义忠实度评分        │
+└───────────┬─────────────┘
+            │
+            ▼
+   Lean 定理 + sorry 占位符
+            │
+            ▼
+┌─────────────────────────┐
+│     AutoLeanProve       │
+│                         │
+│  1. 规划器生成证明策略    │
+│  2. 证明器生成证明代码    │
+│  3. 编译 → 修复          │
+│  4. 失败后重新规划        │
+│  （最多 2 轮 × 5 次）    │
+└───────────┬─────────────┘
+            │
+            ▼
+    完整 Lean 4 证明
+```
 
-默认情况下，相关工具会直接使用仓库内置的：
-- `AUTOLEAN/`
-- `lean-workspace/`
+### 示例
 
-只有在你明确需要覆盖默认路径时，才需要设置：
-- `AUTOLEAN_DIR`
-- `LEAN_PROJECT_DIR`
-- `CLAUDE_CLI_CMD`
+在 Math Code 中输入：
 
-## 证明阶段行为
+```
+Prove that for all integers n, if n is even then n^2 is even
+```
 
-当前 proving 流程对单个 theorem 的尝试是串行执行的，不是同题并行 5 次。
+Math Code 会自动调用 AutoLeanFormalize。形式化完成后，终端显示：
 
-默认参数：
-- `attempts_before_replan = 5`
-- `max_plan_rounds = 2`
-- `workers = 1`
+- 评分（A = 完全忠实，B = 基本忠实，C = 部分，D = 较差）
+- 绿色边框内的 Lean 代码（语法高亮）
+- 选项菜单：
+  - **Prove it** — 继续自动证明
+  - **Retry formalization** — 重新形式化
+  - **Done** — 仅保留形式化结果
 
-这意味着：
-- 单个 theorem 默认最多尝试 `5 × 2 = 10` 次
-- 这 10 次是串行执行
-- `workers` 只会并行处理不同的 Lean 文件
-- 不会让同一个 theorem 同时跑 5 个 proof attempts
+证明完成后：
+  - **Explain proof** — 用自然语言解释整个证明过程
+  - **Retry proving** — 重试
+  - **Done** — 结束
+
+### 实时进度
+
+| 内容 | 样式 |
+|---|---|
+| 思考/规划笔记 | 灰色标题 + 文本 |
+| 生成的 Lean 代码 | 绿色圆角边框 + 语法高亮 |
+| 编译器错误 | 红色圆角边框 |
+| 状态信息 | `[AUTOLEAN]` 前缀 + 粗体 |
+
+### 输出文件
+
+形式化结果保存在 `LeanFormalizations/`：
+
+```
+LeanFormalizations/
+├── problem_xxx.lean          # Lean 定理 + sorry
+├── problem_xxx.eval.json     # 语义评分详情
+└── problem_xxx_proven.lean   # 完成的证明（如成功）
+```
+
+---
+
+## 证明阶段参数
+
+| 参数 | 默认值 | 说明 |
+|---|---|---|
+| `attempts_before_replan` | 5 | 重新规划前的尝试次数 |
+| `max_plan_rounds` | 2 | 最大规划轮数 |
+| `workers` | 1 | 并行工作线程（跨文件，非同题并行） |
+
+---
 
 ## 环境变量
 
 | 变量 | 作用 |
-|------|------|
-| `ANTHROPIC_API_KEY` | API key 模式 |
-| `ANTHROPIC_AUTH_TOKEN` | Bearer token 模式 |
+|---|---|
+| `ANTHROPIC_API_KEY` | API key 认证 |
+| `ANTHROPIC_AUTH_TOKEN` | Bearer token 认证 |
 | `ANTHROPIC_BASE_URL` | 自定义 API 端点 |
 | `ANTHROPIC_MODEL` | 默认模型 |
-| `ANTHROPIC_DEFAULT_SONNET_MODEL` | Sonnet 映射模型 |
-| `ANTHROPIC_DEFAULT_HAIKU_MODEL` | Haiku 映射模型 |
-| `ANTHROPIC_DEFAULT_OPUS_MODEL` | Opus 映射模型 |
 | `AUTOLEAN_DIR` | 覆盖内置 AUTOLEAN 路径 |
 | `LEAN_PROJECT_DIR` | 覆盖内置 Lean 工作区路径 |
-| `CLAUDE_CLI_CMD` | 覆盖 AUTOLEAN 调用的 `mathcode -p` 命令 |
-| `API_TIMEOUT_MS` | API 请求超时 |
+| `CLAUDE_CLI_CMD` | 覆盖 AUTOLEAN 使用的 CLI 命令 |
 | `DISABLE_TELEMETRY` | 关闭遥测 |
-| `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` | 关闭非必要网络流量 |
-| `MATHCODE_SKIP_MATHLIB_CACHE` | 安装时跳过 Mathlib cache |
 
-## Windows
+---
 
-`bin/mathcode` 是 bash 脚本，Windows 下建议直接通过 Bun 启动：
+## 目录结构
 
-```powershell
-bun --env-file=.env ./src/entrypoints/cli.tsx
+```
+mathcode              # 主程序
+run                   # 启动脚本
+setup.sh              # 一键安装（Lean + Python）
+.env.example          # 配置模板
+AUTOLEAN/             # Python 数学形式化管线
+lean-workspace/       # Lean 4 + Mathlib 编译工作区
+LeanFormalizations/   # 形式化输出（运行后自动创建）
 ```
 
-无头模式：
+---
 
-```powershell
-bun --env-file=.env ./src/entrypoints/cli.tsx -p "your prompt here"
-```
+## 常见问题
 
-Recovery CLI：
+**Q: 启动后提示认证失败？**
 
-```powershell
-bun --env-file=.env ./src/localRecoveryCli.ts
-```
+运行 `/login` 完成 Claude OAuth 登录，或在 `.env` 中设置 API key。
 
-## 项目结构
+**Q: 形式化/证明过程很慢？**
 
-```text
-bin/mathcode
-scripts/setup-local.sh
-.env.example
-AUTOLEAN/
-lean-workspace/
-src/
-├── entrypoints/cli.tsx
-├── main.tsx
-├── localRecoveryCli.ts
-├── setup.ts
-├── screens/
-├── tools/
-├── commands/
-├── skills/
-├── services/
-└── utils/
-```
+这是正常的。每次迭代包含 LLM 调用 + Lean 编译。形式化通常 2-5 分钟，证明可能需要 5-15 分钟。
 
-## 适用场景
+**Q: `lake build` 失败？**
 
-- 本地运行终端 Agent
-- 把自然语言数学题转成 Lean 4
-- 做 Lean + Mathlib 的 compile-check-repair
-- 在同一个仓库里打包 CLI、AUTOLEAN 和 Lean workspace
+运行 `bash setup.sh` 重新安装，或确保 elan 已安装且在 PATH 中。
+
+**Q: 不做数学，只想用终端 Agent？**
+
+完全可以。Math Code 本身就是一个完整的终端 AI 助手，支持文件编辑、代码搜索、命令执行等所有常规功能。数学工具只在你输入数学题时自动激活。
+
+---
 
 ## 致谢
 
@@ -223,6 +235,6 @@ Math Code 的数学形式化与证明管线基于 [AUTOLEAN](https://github.com/
 
 ## 说明
 
-- 本仓库仅供学习和研究用途
-- 数学工作流依赖模型调用与 Lean 编译环境
-- 如果跳过 Mathlib cache，首次相关任务会更慢
+- 本项目仅供学习和研究用途
+- 数学工作流依赖 Claude API 访问权限和 Lean 编译环境
+- 如果跳过 Mathlib cache，首次编译任务会更慢
