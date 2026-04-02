@@ -279,7 +279,7 @@ If you use Math Code in your research, please cite:
 
 ```bibtex
 @misc{mathcode2026,
-  title     = {Math Code: A Frontier Agentic Math Prover},
+  title     = {Math Code: A Frontier Mathematical Coding Agent},
   author    = {Math-AI Team},
   year      = {2026},
   url       = {https://github.com/math-ai-org/mathcode}
