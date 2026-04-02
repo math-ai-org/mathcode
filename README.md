@@ -269,3 +269,15 @@ The math formalization and proving pipeline in Math Code is based on the [AUTOLE
 - This project is for learning and research purposes
 - The math workflow requires Claude API access and a working Lean compile environment
 - If the Mathlib cache is skipped, the first compilation task will be slower
+
+## Citation
+If you use Math Code in your research, please cite:
+
+```bibtex
+@misc{mathcode2026,
+  title     = {Math Code: A Frontier Agentic Math Prover},
+  author    = {Math-AI Team},
+  year      = {2026},
+  url       = {https://github.com/math-ai-org/mathcode}
+}
+```
