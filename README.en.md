@@ -30,13 +30,29 @@ Math Code is a terminal AI coding assistant with a built-in math formalization e
 
 ## Quick Start
 
-### 1. Requirements
+### 1. Clone the repository
+
+This project uses Git LFS for the binary. Make sure `git-lfs` is installed before cloning:
+
+```bash
+# Install git-lfs (if not already installed)
+brew install git-lfs   # macOS
+# apt install git-lfs  # Linux
+
+git lfs install
+git clone https://github.com/math-ai-org/mathcode-macOS.git
+cd mathcode-macOS
+```
+
+> **Note:** If `./run` fails with `version: command not found`, the binary wasn't downloaded properly. Run `git lfs pull` to fetch the real file.
+
+### 2. Requirements
 
 - macOS (arm64) or Linux (x86_64)
 - Python 3.10+
 - ~2GB disk space (Lean + Mathlib cache needs an additional ~5GB)
 
-### 2. Install and run
+### 3. Install and run
 
 ```bash
 bash setup.sh
@@ -47,7 +63,7 @@ bash setup.sh
 
 Once setup is done, use `./run` to start Math Code.
 
-### 3. Configure Authentication
+### 4. Configure Authentication
 
 **Option A: Claude OAuth (recommended)**
 
@@ -75,7 +91,7 @@ ANTHROPIC_BASE_URL=https://your-endpoint.com
 ANTHROPIC_MODEL=claude-sonnet-4-20250514
 ```
 
-### 4. Launch
+### 5. Launch
 
 ```bash
 ./run

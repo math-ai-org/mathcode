@@ -30,13 +30,29 @@ Math Code 是一个终端 AI 编程助手，内置数学形式化引擎。输入
 
 ## 快速开始
 
-### 1. 系统要求
+### 1. 克隆仓库
+
+本项目使用 Git LFS 存储二进制文件。克隆前请确保已安装 `git-lfs`：
+
+```bash
+# 安装 git-lfs（如尚未安装）
+brew install git-lfs   # macOS
+# apt install git-lfs  # Linux
+
+git lfs install
+git clone https://github.com/math-ai-org/mathcode-macOS.git
+cd mathcode-macOS
+```
+
+> **注意：** 如果克隆后运行 `./run` 出现 `version: command not found` 错误，说明二进制文件未正确下载。请运行 `git lfs pull` 拉取真实文件。
+
+### 2. 系统要求
 
 - macOS (arm64) 或 Linux (x86_64)
 - Python 3.10+
 - 约 2GB 磁盘空间（Lean + Mathlib 缓存另需 ~5GB）
 
-### 2. 安装并运行
+### 3. 安装并运行
 
 ```bash
 bash setup.sh
@@ -47,7 +63,7 @@ bash setup.sh
 
 安装完成后，用 `./run` 启动 Math Code。
 
-### 3. 配置认证
+### 4. 配置认证
 
 **方式一：Claude OAuth（推荐）**
 
@@ -75,7 +91,7 @@ ANTHROPIC_BASE_URL=https://your-endpoint.com
 ANTHROPIC_MODEL=claude-sonnet-4-20250514
 ```
 
-### 4. 启动
+### 5. 启动
 
 ```bash
 ./run
