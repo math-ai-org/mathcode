@@ -15,6 +15,8 @@
 
 Math Code is a terminal AI coding assistant with a built-in math formalization engine. Give it a math problem in plain language and it will automatically convert it into a Lean 4 theorem and attempt a formal proof.
 
+![](./Demo.png) 
+
 ## Key Features
 
 - Interactive terminal UI (TUI)
