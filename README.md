@@ -9,33 +9,33 @@
 ╚═╝     ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝
 ```
 
-<p align="right"><strong>中文</strong> | <a href="./README.en.md">English</a></p>
+<p align="right"><strong>English</strong> | <a href="./README.ZH.md">中文</a></p>
 
-Math Code 是一个终端 AI 编程助手，内置数学形式化引擎。输入一道自然语言数学题，它会自动将其转化为 Lean 4 定理并尝试完成形式化证明。
+Math Code is a terminal AI coding assistant with a built-in math formalization engine. Give it a math problem in plain language and it will automatically convert it into a Lean 4 theorem and attempt a formal proof.
 
-## 主要能力
+## Key Features
 
-- 交互式终端界面（TUI）
-- `-p` / `--print` 无头模式（可嵌入脚本）
-- 自然语言数学题 → Lean 4 定理声明（自动形式化）
-- 定理声明 → 完整证明（自动证明）
-- 编译-检查-修复循环（最多 10 次尝试）
-- 语义忠实度评分（A/B/C/D）
-- 实时显示 LLM 思考过程、Lean 代码和编译器错误
-- 证明完成后可请求自然语言解释
-- Claude OAuth 登录 / API key 认证
-- MCP 服务器和插件支持
+- Interactive terminal UI (TUI)
+- `-p` / `--print` headless mode (scriptable)
+- Natural language math → Lean 4 theorem statement (auto-formalization)
+- Theorem statement → complete proof (auto-proving)
+- Compile-check-repair loop (up to 10 attempts)
+- Semantic fidelity grading (A/B/C/D)
+- Live display of LLM reasoning, Lean code, and compiler errors
+- Natural language proof explanation on demand
+- Claude OAuth login / API key authentication
+- MCP server and plugin support
 
 ---
 
-## 快速开始
+## Quick Start
 
-### 1. 克隆仓库
+### 1. Clone the repository
 
-本项目使用 Git LFS 存储二进制文件。克隆前请确保已安装 `git-lfs`：
+This project uses Git LFS for the binary. Make sure `git-lfs` is installed before cloning:
 
 ```bash
-# 安装 git-lfs（如尚未安装）
+# Install git-lfs (if not already installed)
 brew install git-lfs   # macOS
 # apt install git-lfs  # Linux
 
@@ -44,46 +44,46 @@ git clone https://github.com/math-ai-org/mathcode-macOS.git
 cd mathcode-macOS
 ```
 
-> **注意：** 如果克隆后运行 `./run` 出现 `version: command not found` 错误，说明二进制文件未正确下载。请运行 `git lfs pull` 拉取真实文件。
+> **Note:** If `./run` fails with `version: command not found`, the binary wasn't downloaded properly. Run `git lfs pull` to fetch the real file.
 
-### 2. 系统要求
+### 2. Requirements
 
-- macOS (arm64) 或 Linux (x86_64)
+- macOS (arm64) or Linux (x86_64)
 - Python 3.10+
-- 约 2GB 磁盘空间（Lean + Mathlib 缓存另需 ~5GB）
+- ~2GB disk space (Lean + Mathlib cache needs an additional ~5GB)
 
-### 3. 安装并运行
+### 3. Install and run
 
 ```bash
 bash setup.sh
 ./run
 ```
 
-`setup.sh` 自动完成：创建 `.env`、安装 Python 依赖、安装 Lean 工具链、下载 Mathlib 缓存。
+`setup.sh` handles everything: creates `.env`, installs Python dependencies, installs Lean toolchain, and downloads Mathlib cache.
 
-安装完成后，用 `./run` 启动 Math Code。
+Once setup is done, use `./run` to start Math Code.
 
-### 4. 配置认证
+### 4. Configure Authentication
 
-**方式一：Claude OAuth（推荐）**
+**Option A: Claude OAuth (recommended)**
 
-不需要修改 `.env`。启动 Math Code 后执行：
+Leave `.env` unchanged. After starting Math Code, run:
 
 ```
 /login
 ```
 
-按提示在浏览器中完成授权即可。
+Follow the browser prompt to authorize.
 
-**方式二：API Key**
+**Option B: API Key**
 
-在 `.env` 中设置：
+Set in `.env`:
 
 ```env
 ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-**方式三：第三方兼容端点**
+**Option C: Third-party compatible endpoint**
 
 ```env
 ANTHROPIC_API_KEY=your-key
@@ -91,13 +91,13 @@ ANTHROPIC_BASE_URL=https://your-endpoint.com
 ANTHROPIC_MODEL=claude-sonnet-4-20250514
 ```
 
-### 5. 启动
+### 5. Launch
 
 ```bash
 ./run
 ```
 
-常用形式：
+Common usage:
 
 ```bash
 ./run -p "prove that the square of an even number is even"
@@ -106,150 +106,150 @@ ANTHROPIC_MODEL=claude-sonnet-4-20250514
 
 ---
 
-## 数学工作流
+## Math Workflow
 
-### 整体流程
+### Pipeline
 
 ```
-自然语言数学题
+Natural language math problem
     │
     ▼
-┌─────────────────────────┐
-│   AutoLeanFormalize     │
-│                         │
-│  1. LLM 推导证明策略     │
-│  2. 生成 Lean 4 定理     │
-│  3. 编译 → 修复（≤6 轮） │
-│  4. 语义忠实度评分        │
-└───────────┬─────────────┘
-            │
-            ▼
-   Lean 定理 + sorry 占位符
-            │
-            ▼
-┌─────────────────────────┐
-│     AutoLeanProve       │
-│                         │
-│  1. 规划器生成证明策略    │
-│  2. 证明器生成证明代码    │
-│  3. 编译 → 修复          │
-│  4. 失败后重新规划        │
-│  （最多 2 轮 × 5 次）    │
-└───────────┬─────────────┘
-            │
-            ▼
-    完整 Lean 4 证明
+┌─────────────────────────────┐
+│     AutoLeanFormalize       │
+│                             │
+│  1. LLM derives strategy    │
+│  2. Generate Lean 4 theorem │
+│  3. Compile → repair (≤6x)  │
+│  4. Semantic fidelity grade │
+└─────────────┬───────────────┘
+              │
+              ▼
+     Lean theorem + sorry
+              │
+              ▼
+┌─────────────────────────────┐
+│       AutoLeanProve         │
+│                             │
+│  1. Planner: proof strategy │
+│  2. Prover: proof code      │
+│  3. Compile → repair        │
+│  4. Replan on failure       │
+│  (up to 2 rounds × 5 each) │
+└─────────────┬───────────────┘
+              │
+              ▼
+      Complete Lean 4 proof
 ```
 
-### 示例
+### Example
 
-在 Math Code 中输入：
+Type into Math Code:
 
 ```
 Prove that for all integers n, if n is even then n^2 is even
 ```
 
-Math Code 会自动调用 AutoLeanFormalize。形式化完成后，终端显示：
+Math Code automatically calls AutoLeanFormalize. When done, the terminal shows:
 
-- 评分（A = 完全忠实，B = 基本忠实，C = 部分，D = 较差）
-- 绿色边框内的 Lean 代码（语法高亮）
-- 选项菜单：
-  - **Prove it** — 继续自动证明
-  - **Retry formalization** — 重新形式化
-  - **Done** — 仅保留形式化结果
+- Grade (A = fully faithful, B = mostly, C = partial, D = poor)
+- Lean code in a green bordered box (syntax-highlighted)
+- Action menu:
+  - **Prove it** — proceed to automated proving
+  - **Retry formalization** — try a different approach
+  - **Done** — keep the formalization as-is
 
-证明完成后：
-  - **Explain proof** — 用自然语言解释整个证明过程
-  - **Retry proving** — 重试
-  - **Done** — 结束
+After proving:
+  - **Explain proof** — get a step-by-step natural language walkthrough
+  - **Retry proving** — try again
+  - **Done** — finished
 
-### 实时进度
+### Live Progress
 
-| 内容 | 样式 |
+| Content | Style |
 |---|---|
-| 思考/规划笔记 | 灰色标题 + 文本 |
-| 生成的 Lean 代码 | 绿色圆角边框 + 语法高亮 |
-| 编译器错误 | 红色圆角边框 |
-| 状态信息 | `[AUTOLEAN]` 前缀 + 粗体 |
+| Thinking/planning notes | Dimmed header + text |
+| Generated Lean code | Green rounded border + syntax highlighting |
+| Compiler errors | Red rounded border |
+| Status updates | `[AUTOLEAN]` prefix + bold |
 
-### 输出文件
+### Output Files
 
-形式化结果保存在 `LeanFormalizations/`：
+Formalization results are saved to `LeanFormalizations/`:
 
 ```
 LeanFormalizations/
-├── problem_xxx.lean          # Lean 定理 + sorry
-├── problem_xxx.eval.json     # 语义评分详情
-└── problem_xxx_proven.lean   # 完成的证明（如成功）
+├── problem_xxx.lean          # Lean theorem + sorry
+├── problem_xxx.eval.json     # Semantic grade details
+└── problem_xxx_proven.lean   # Completed proof (if successful)
 ```
 
 ---
 
-## 证明阶段参数
+## Proving Parameters
 
-| 参数 | 默认值 | 说明 |
+| Parameter | Default | Description |
 |---|---|---|
-| `attempts_before_replan` | 5 | 重新规划前的尝试次数 |
-| `max_plan_rounds` | 2 | 最大规划轮数 |
-| `workers` | 1 | 并行工作线程（跨文件，非同题并行） |
+| `attempts_before_replan` | 5 | Attempts before asking the planner for a new strategy |
+| `max_plan_rounds` | 2 | Maximum replanning rounds |
+| `workers` | 1 | Parallel workers (across files, not same theorem) |
 
 ---
 
-## 环境变量
+## Environment Variables
 
-| 变量 | 作用 |
+| Variable | Purpose |
 |---|---|
-| `ANTHROPIC_API_KEY` | API key 认证 |
-| `ANTHROPIC_AUTH_TOKEN` | Bearer token 认证 |
-| `ANTHROPIC_BASE_URL` | 自定义 API 端点 |
-| `ANTHROPIC_MODEL` | 默认模型 |
-| `AUTOLEAN_DIR` | 覆盖内置 AUTOLEAN 路径 |
-| `LEAN_PROJECT_DIR` | 覆盖内置 Lean 工作区路径 |
-| `CLAUDE_CLI_CMD` | 覆盖 AUTOLEAN 使用的 CLI 命令 |
-| `DISABLE_TELEMETRY` | 关闭遥测 |
+| `ANTHROPIC_API_KEY` | API key authentication |
+| `ANTHROPIC_AUTH_TOKEN` | Bearer token authentication |
+| `ANTHROPIC_BASE_URL` | Custom API endpoint |
+| `ANTHROPIC_MODEL` | Default model |
+| `AUTOLEAN_DIR` | Override bundled AUTOLEAN path |
+| `LEAN_PROJECT_DIR` | Override bundled Lean workspace path |
+| `CLAUDE_CLI_CMD` | Override the CLI command used by AUTOLEAN |
+| `DISABLE_TELEMETRY` | Disable telemetry |
 
 ---
 
-## 目录结构
+## Directory Layout
 
 ```
-mathcode              # 主程序
-run                   # 启动脚本
-setup.sh              # 一键安装（Lean + Python）
-.env.example          # 配置模板
-AUTOLEAN/             # Python 数学形式化管线
-lean-workspace/       # Lean 4 + Mathlib 编译工作区
-LeanFormalizations/   # 形式化输出（运行后自动创建）
+mathcode              # main executable
+run                   # launcher script
+setup.sh              # one-command setup (Lean + Python)
+.env.example          # config template
+AUTOLEAN/             # Python math formalization pipeline
+lean-workspace/       # Lean 4 + Mathlib compile workspace
+LeanFormalizations/   # formalization output (created at runtime)
 ```
 
 ---
 
-## 常见问题
+## FAQ
 
-**Q: 启动后提示认证失败？**
+**Q: Authentication fails on startup?**
 
-运行 `/login` 完成 Claude OAuth 登录，或在 `.env` 中设置 API key。
+Run `/login` to complete Claude OAuth, or set an API key in `.env`.
 
-**Q: 形式化/证明过程很慢？**
+**Q: Formalization / proving is slow?**
 
-这是正常的。每次迭代包含 LLM 调用 + Lean 编译。形式化通常 2-5 分钟，证明可能需要 5-15 分钟。
+This is expected. Each iteration involves an LLM call + Lean compilation. Formalization typically takes 2-5 minutes, proving may need 5-15 minutes.
 
-**Q: `lake build` 失败？**
+**Q: `lake build` fails?**
 
-运行 `bash setup.sh` 重新安装，或确保 elan 已安装且在 PATH 中。
+Run `bash setup.sh` to reinstall, or make sure elan is installed and on your PATH.
 
-**Q: 不做数学，只想用终端 Agent？**
+**Q: Can I use it without math, just as a terminal agent?**
 
-完全可以。Math Code 本身就是一个完整的终端 AI 助手，支持文件编辑、代码搜索、命令执行等所有常规功能。数学工具只在你输入数学题时自动激活。
+Absolutely. Math Code is a full-featured terminal AI assistant supporting file editing, code search, command execution, and more. The math tools only activate when you input a math problem.
 
 ---
 
-## 致谢
+## Acknowledgments
 
-Math Code 的数学形式化与证明管线基于 [AUTOLEAN](https://github.com/T3S1AMAX/autolean.git) 项目。
+The math formalization and proving pipeline in Math Code is based on the [AUTOLEAN](https://github.com/T3S1AMAX/autolean.git) project.
 
-## 说明
+## Notes
 
-- 本项目仅供学习和研究用途
-- 数学工作流依赖 Claude API 访问权限和 Lean 编译环境
-- 如果跳过 Mathlib cache，首次编译任务会更慢
+- This project is for learning and research purposes
+- The math workflow requires Claude API access and a working Lean compile environment
+- If the Mathlib cache is skipped, the first compilation task will be slower

@@ -9,3 +9,5 @@ AUTOLEAN/**/__pycache__/
 AUTOLEAN/**/*.pyc
 lean-workspace/.lake/
 lean-workspace/lake-manifest.json
+.local
+*.egg-info
