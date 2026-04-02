@@ -185,13 +185,25 @@ LeanFormalizations/
 
 ---
 
-## Proving Parameters
+## Math Workflow Parameters
 
-| Parameter | Default | Description |
+These can be set in `.env` to customize the proving behavior:
+
+| Variable | Default | Description |
 |---|---|---|
-| `attempts_before_replan` | 5 | Attempts before asking the planner for a new strategy |
-| `max_plan_rounds` | 2 | Maximum replanning rounds |
-| `workers` | 1 | Parallel workers (across files, not same theorem) |
+| `MATHCODE_MAX_FORMALIZE_ITERS` | 6 | Formalization compile-repair iterations |
+| `MATHCODE_ATTEMPTS_BEFORE_REPLAN` | 5 | Proof attempts before replanning |
+| `MATHCODE_MAX_PLAN_ROUNDS` | 2 | Maximum replanning rounds |
+| `MATHCODE_PROVE_WORKERS` | 1 | Parallel proof workers (across files, not same theorem) |
+
+For example, to increase proving effort:
+
+```env
+MATHCODE_ATTEMPTS_BEFORE_REPLAN=8
+MATHCODE_MAX_PLAN_ROUNDS=3
+```
+
+Max attempts per theorem = `MATHCODE_ATTEMPTS_BEFORE_REPLAN × MATHCODE_MAX_PLAN_ROUNDS` (default 5 × 2 = 10).
 
 ---
 
@@ -206,6 +218,10 @@ LeanFormalizations/
 | `AUTOLEAN_DIR` | Override bundled AUTOLEAN path |
 | `LEAN_PROJECT_DIR` | Override bundled Lean workspace path |
 | `CLAUDE_CLI_CMD` | Override the CLI command used by AUTOLEAN |
+| `MATHCODE_MAX_FORMALIZE_ITERS` | Formalization compile-repair iterations |
+| `MATHCODE_ATTEMPTS_BEFORE_REPLAN` | Proof attempts before replanning |
+| `MATHCODE_MAX_PLAN_ROUNDS` | Maximum replanning rounds |
+| `MATHCODE_PROVE_WORKERS` | Parallel proof workers |
 | `DISABLE_TELEMETRY` | Disable telemetry |
 
 ---

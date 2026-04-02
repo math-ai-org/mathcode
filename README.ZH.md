@@ -185,13 +185,25 @@ LeanFormalizations/
 
 ---
 
-## 证明阶段参数
+## 数学工作流参数
 
-| 参数 | 默认值 | 说明 |
+可以在 `.env` 中调整以下参数：
+
+| 变量 | 默认值 | 说明 |
 |---|---|---|
-| `attempts_before_replan` | 5 | 重新规划前的尝试次数 |
-| `max_plan_rounds` | 2 | 最大规划轮数 |
-| `workers` | 1 | 并行工作线程（跨文件，非同题并行） |
+| `MATHCODE_MAX_FORMALIZE_ITERS` | 6 | 形式化编译-修复迭代次数 |
+| `MATHCODE_ATTEMPTS_BEFORE_REPLAN` | 5 | 重新规划前的证明尝试次数 |
+| `MATHCODE_MAX_PLAN_ROUNDS` | 2 | 最大规划轮数 |
+| `MATHCODE_PROVE_WORKERS` | 1 | 并行证明工作线程（跨文件，非同题并行） |
+
+例如，增加证明尝试次数和规划轮数：
+
+```env
+MATHCODE_ATTEMPTS_BEFORE_REPLAN=8
+MATHCODE_MAX_PLAN_ROUNDS=3
+```
+
+单个定理的最大尝试次数 = `MATHCODE_ATTEMPTS_BEFORE_REPLAN × MATHCODE_MAX_PLAN_ROUNDS`（默认 5 × 2 = 10）。
 
 ---
 
@@ -206,6 +218,10 @@ LeanFormalizations/
 | `AUTOLEAN_DIR` | 覆盖内置 AUTOLEAN 路径 |
 | `LEAN_PROJECT_DIR` | 覆盖内置 Lean 工作区路径 |
 | `CLAUDE_CLI_CMD` | 覆盖 AUTOLEAN 使用的 CLI 命令 |
+| `MATHCODE_MAX_FORMALIZE_ITERS` | 形式化编译-修复迭代次数 |
+| `MATHCODE_ATTEMPTS_BEFORE_REPLAN` | 重新规划前的证明尝试次数 |
+| `MATHCODE_MAX_PLAN_ROUNDS` | 最大规划轮数 |
+| `MATHCODE_PROVE_WORKERS` | 并行证明工作线程数 |
 | `DISABLE_TELEMETRY` | 关闭遥测 |
 
 ---
