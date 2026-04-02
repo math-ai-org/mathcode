@@ -36,17 +36,16 @@ Math Code 是一个终端 AI 编程助手，内置数学形式化引擎。输入
 - Python 3.10+
 - 约 2GB 磁盘空间（Lean + Mathlib 缓存另需 ~5GB）
 
-### 2. 一键安装
+### 2. 安装并运行
 
 ```bash
 bash setup.sh
+./run
 ```
 
-该脚本自动完成：
-- 创建 `.env` 配置文件
-- 创建 Python venv 并安装 AUTOLEAN 依赖
-- 安装 Lean 工具链（如系统没有）
-- 构建 Lean 工作区并下载 Mathlib 缓存
+`setup.sh` 自动完成：创建 `.env`、安装 Python 依赖、安装 Lean 工具链、下载 Mathlib 缓存。
+
+安装完成后，用 `./run` 启动 Math Code。
 
 ### 3. 配置认证
 

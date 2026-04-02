@@ -36,17 +36,16 @@ Math Code is a terminal AI coding assistant with a built-in math formalization e
 - Python 3.10+
 - ~2GB disk space (Lean + Mathlib cache needs an additional ~5GB)
 
-### 2. One-command setup
+### 2. Install and run
 
 ```bash
 bash setup.sh
+./run
 ```
 
-This script automatically:
-- Creates `.env` config file
-- Creates Python venv and installs AUTOLEAN dependencies
-- Installs Lean toolchain (if not already present)
-- Builds Lean workspace and downloads Mathlib cache
+`setup.sh` handles everything: creates `.env`, installs Python dependencies, installs Lean toolchain, and downloads Mathlib cache.
+
+Once setup is done, use `./run` to start Math Code.
 
 ### 3. Configure Authentication
 
