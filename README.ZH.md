@@ -9,6 +9,8 @@
 ╚═╝     ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝
 ```
 
+**Project Page:** [math-ai-org/mathcode](https://github.com/math-ai-org/mathcode) 
+
 <p align="right"><strong>中文</strong> | <a href="./README.md">English</a></p>
 
 Math Code 是一个终端 AI 编程助手，内置数学形式化引擎。输入一道自然语言数学题，它会自动将其转化为 Lean 4 定理并尝试完成形式化证明。
