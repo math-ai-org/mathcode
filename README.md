@@ -1,6 +1,6 @@
-# Math Code
+# MathCode
 
-### Math Code: A Frontier Mathematical Coding Agent
+### MathCode: A Frontier Mathematical Coding Agent
 
 ```
 ███╗   ███╗ █████╗ ████████╗██╗  ██╗ ██████╗ ██████╗ ██████╗ ███████╗
@@ -15,7 +15,7 @@
 
 <p align="right"><strong>English</strong> | <a href="./README.ZH.md">中文</a></p>
 
-Math Code is a terminal AI coding assistant with a built-in math formalization engine. Give it a math problem in plain language and it will automatically convert it into a Lean 4 theorem and attempt a formal proof.
+MathCode is a terminal AI coding assistant with a built-in math formalization engine. Give it a math problem in plain language and it will automatically convert it into a Lean 4 theorem and attempt a formal proof.
 
 ![](./Demo.png) 
 
@@ -67,13 +67,13 @@ bash setup.sh
 
 `setup.sh` handles everything: creates `.env`, installs Python dependencies, installs Lean toolchain, and downloads Mathlib cache.
 
-Once setup is done, use `./run` to start Math Code.
+Once setup is done, use `./run` to start MathCode.
 
 ### 4. Configure Authentication
 
 **Option A: Claude OAuth (recommended)**
 
-Leave `.env` unchanged. After starting Math Code, run:
+Leave `.env` unchanged. After starting MathCode, run:
 
 ```
 /login
@@ -149,13 +149,13 @@ Natural language math problem
 
 ### Example
 
-Type into Math Code:
+Type into MathCode:
 
 ```
 Prove that for all integers n, if n is even then n^2 is even
 ```
 
-Math Code automatically calls AutoLeanFormalize. When done, the terminal shows:
+MathCode automatically calls AutoLeanFormalize. When done, the terminal shows:
 
 - Grade (A = fully faithful, B = mostly, C = partial, D = poor)
 - Lean code in a green bordered box (syntax-highlighted)
@@ -262,13 +262,13 @@ Run `bash setup.sh` to reinstall, or make sure elan is installed and on your PAT
 
 **Q: Can I use it without math, just as a terminal agent?**
 
-Absolutely. Math Code is a full-featured terminal AI assistant supporting file editing, code search, command execution, and more. The math tools only activate when you input a math problem.
+Absolutely. MathCode is a full-featured terminal AI assistant supporting file editing, code search, command execution, and more. The math tools only activate when you input a math problem.
 
 ---
 
 ## Acknowledgments
 
-The math formalization and proving pipeline in Math Code is based on the [AUTOLEAN](https://github.com/T3S1AMAX/autolean.git) project.
+The math formalization and proving pipeline in MathCode is based on the [AUTOLEAN](https://github.com/T3S1AMAX/autolean.git) project.
 
 ## Notes
 
@@ -277,11 +277,11 @@ The math formalization and proving pipeline in Math Code is based on the [AUTOLE
 - If the Mathlib cache is skipped, the first compilation task will be slower
 
 ## Citation
-If you use Math Code in your research, please cite:
+If you use MathCode in your research, please cite:
 
 ```bibtex
 @misc{mathcode2026,
-  title     = {Math Code: A Frontier Mathematical Coding Agent},
+  title     = {MathCode: A Frontier Mathematical Coding Agent},
   author    = {Math-AI Team},
   year      = {2026},
   url       = {https://github.com/math-ai-org/mathcode}
