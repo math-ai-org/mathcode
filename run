@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+DIST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Load .env if present
+if [[ -f "$DIST_DIR/.env" ]]; then
+  set -a
+  source "$DIST_DIR/.env"
+  set +a
+fi
+
+# Set up Lean if locally installed alongside the binary
+if [[ -d "$DIST_DIR/.local/elan/bin" ]]; then
+  export ELAN_HOME="$DIST_DIR/.local/elan"
+  export PATH="$DIST_DIR/.local/elan/bin:$PATH"
+fi
+
+# Tell AUTOLEAN tools where to find things in the binary distribution.
+# In the compiled binary, import.meta.url points to a virtual filesystem,
+# so these paths must be set explicitly.
+export AUTOLEAN_DIR="${AUTOLEAN_DIR:-$DIST_DIR/AUTOLEAN}"
+export LEAN_PROJECT_DIR="${LEAN_PROJECT_DIR:-$DIST_DIR/lean-workspace}"
+export CLAUDE_CLI_CMD="${CLAUDE_CLI_CMD:-${DIST_DIR}/mathcode -p}"
+
+exec "$DIST_DIR/mathcode" "$@"

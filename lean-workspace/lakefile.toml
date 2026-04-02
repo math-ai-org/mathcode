@@ -1,0 +1,15 @@
+name = "MathCodeLean"
+version = "0.1.0"
+keywords = ["math", "formalization"]
+defaultTargets = ["MathCodeLean"]
+
+[leanOptions]
+pp.unicode.fun = true
+relaxedAutoImplicit = false
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+
+[[lean_lib]]
+name = "MathCodeLean"

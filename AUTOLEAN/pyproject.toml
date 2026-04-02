@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autolean"
+version = "0.1.0"
+description = "Codex ↔ Lean compile-check-repair loop for JSON problem sets (Ralph-ready)."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{name = "Autolean Project"}]
+dependencies = [
+  "pypinyin>=0.50.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.0",
+  "ruff>=0.6.0",
+]
+
+[project.scripts]
+autolean = "autolean.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
