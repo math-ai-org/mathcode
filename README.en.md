@@ -217,8 +217,12 @@ src/
 - performing Lean + Mathlib compile-check-repair loops
 - keeping the CLI, AUTOLEAN, and Lean workspace in one repository
 
+## Acknowledgments
+
+The math formalization and proving pipeline in Math Code is based on the [AUTOLEAN](https://github.com/T3S1AMAX/autolean.git) project.
+
 ## Notes
 
-- this repository is for learning and research use
-- the math workflow depends on model access and a working Lean compile environment
-- if the Mathlib cache is skipped, the first related task will be slower
+- This project is for learning and research purposes
+- The math workflow requires Claude API access and a working Lean compile environment
+- If the Mathlib cache is skipped, the first compilation task will be slower

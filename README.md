@@ -217,6 +217,10 @@ src/
 - 做 Lean + Mathlib 的 compile-check-repair
 - 在同一个仓库里打包 CLI、AUTOLEAN 和 Lean workspace
 
+## 致谢
+
+Math Code 的数学形式化与证明管线基于 [AUTOLEAN](https://github.com/T3S1AMAX/autolean.git) 项目。
+
 ## 说明
 
 - 本仓库仅供学习和研究用途
