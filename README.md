@@ -287,3 +287,8 @@ If you use MathCode in your research, please cite:
   url       = {https://github.com/math-ai-org/mathcode}
 }
 ```
+
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=math-ai-org/mathcode&type=Date)](https://star-history.com/#math-ai-org/mathdate&Date)
