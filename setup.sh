@@ -65,7 +65,7 @@ EOF
 }
 
 do_clean() {
-  log "Cleaning MathCode artifacts from $ROOT_DIR …"
+  log "Cleaning MathCode install artifacts from $ROOT_DIR ..."
   rm -f  "$ROOT_DIR/mathcode"
   rm -rf "$AUTOLEAN_DIR"
   rm -rf "$LOCAL_ELAN_HOME"
@@ -74,9 +74,9 @@ do_clean() {
   rm -rf "$LEAN_WORKSPACE_DIR/.lake"
   rm -rf "$LEAN_WORKSPACE_DIR/lake-packages"
   rm -rf "$LEAN_WORKSPACE_DIR/build"
-  rm -rf "$ROOT_DIR/LeanFormalizations"
-  rm -rf "$ROOT_DIR/ObsidianVault"
+  log "Kept user outputs in LeanFormalizations/ and ObsidianVault/."
   log "Done. Run 'bash setup.sh' to reinstall."
+}
 }
 
 do_status() {
