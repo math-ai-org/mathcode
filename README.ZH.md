@@ -417,7 +417,13 @@ OPENROUTER_BASE_URL=https://api.atlascloud.ai/v1
 OPENROUTER_MODEL=deepseek-ai/deepseek-v4-pro
 ```
 
-`deepseek-ai/deepseek-v4-pro` 是 formalize / prove 阶段的一个合适默认选择。Atlas 的模型可用性会随时间变化；请用 Atlas 实时模型库或 `GET https://api.atlascloud.ai/v1/models` 选择其它 text/chat 模型 id。
+`deepseek-ai/deepseek-v4-pro` 是 formalize / prove 阶段的一个合适默认选择。其它常用 Atlas text/chat 模型 id 包括：
+
+- **Anthropic (Claude)：** `anthropic/claude-haiku-4.5-20251001`, `anthropic/claude-opus-4.8`, `anthropic/claude-sonnet-4.6`
+- **OpenAI (GPT)：** `openai/gpt-5.4`, `openai/gpt-5.5`
+- **Google (Gemini)：** `google/gemini-3.1-flash-lite`, `google/gemini-3.1-pro-preview`, `google/gemini-3.5-flash`
+
+Atlas 的模型可用性会随时间变化；请用 Atlas 实时模型库或 `GET https://api.atlascloud.ai/v1/models` 选择其它 text/chat 模型 id。
 
 如果你还想让数学工具也停止使用 `codex exec`，再加：
 
