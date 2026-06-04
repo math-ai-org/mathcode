@@ -455,6 +455,7 @@ OPENROUTER_MODEL=deepseek-ai/deepseek-v4-pro
 - **Anthropic (Claude):** `anthropic/claude-haiku-4.5-20251001`, `anthropic/claude-opus-4.8`, `anthropic/claude-sonnet-4.6`
 - **OpenAI (GPT):** `openai/gpt-5.4`, `openai/gpt-5.5`
 - **Google (Gemini):** `google/gemini-3.1-flash-lite`, `google/gemini-3.1-pro-preview`, `google/gemini-3.5-flash`
+- **xAI:** `xai/grok-4.3`
 
 Atlas model availability changes over time; use the live Atlas model library or `GET https://api.atlascloud.ai/v1/models` to choose another text/chat model id.
 
