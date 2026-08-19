@@ -576,7 +576,7 @@ makes `bash setup.sh` the default path.
 
 Track the project's growth over time here:
 
-[![Star History Chart](https://api.star-history.com/svg?repos=math-ai-org/mathcode&type=Date)](https://www.star-history.com/#math-ai-org/mathcode&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=math-ai-org/mathcode&type=Date)](https://star-history.dera.page/#math-ai-org/mathcode&Date)
 
 ## Citation
 
