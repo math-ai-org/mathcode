@@ -1164,21 +1164,24 @@ release_metadata_file() {
   printf '%s/.mathcode-release\n' "$ROOT_DIR"
 }
 
-release_metadata_value() {
-  local key="$1"
-  local file
-  file="$(release_metadata_file)"
+metadata_file_value() {
+  local file="$1"
+  local key="$2"
   [[ -f "$file" ]] || return 1
   awk -F= -v key="$key" '
     $1 == key {
-      print substr($0, length($1) + 2)
-      found = 1
-      exit
+      value = substr($0, length($1) + 2)
+      count += 1
     }
     END {
-      if (!found) exit 1
+      if (count != 1 || value == "") exit 1
+      print value
     }
   ' "$file"
+}
+
+release_metadata_value() {
+  metadata_file_value "$(release_metadata_file)" "$1"
 }
 
 have_release_checksum_tool() {
@@ -1301,7 +1304,8 @@ ensure_mathcode_binary() {
   local webui_binary_path="$ROOT_DIR/mathcode-webui"
   local metadata_path
   local archive_name bundle_name temp_dir archive_path checksum_path
-  local extract_dir staged_binary_path staged_webui_binary_path staged_vendor_dir
+  local extract_dir staged_binary_path staged_webui_binary_path staged_vendor_dir staged_metadata_path
+  local staged_tag staged_generation staged_binary_sha staged_webui_sha
   local temp_binary_path temp_webui_binary_path temp_vendor_dir backup_root
   local binary_backup webui_backup vendor_backup metadata_backup
 
@@ -1350,6 +1354,7 @@ ensure_mathcode_binary() {
     -C "$extract_dir" \
     "$bundle_name/mathcode" \
     "$bundle_name/mathcode-webui" \
+    "$bundle_name/.mathcode-release" \
     "$bundle_name/vendor"; then
     rm -rf "$temp_dir"
     log "Downloaded release archive could not be extracted."
@@ -1359,6 +1364,7 @@ ensure_mathcode_binary() {
   staged_binary_path="$extract_dir/$bundle_name/mathcode"
   staged_webui_binary_path="$extract_dir/$bundle_name/mathcode-webui"
   staged_vendor_dir="$extract_dir/$bundle_name/vendor"
+  staged_metadata_path="$extract_dir/$bundle_name/.mathcode-release"
   chmod +x "$staged_binary_path"
   chmod +x "$staged_webui_binary_path"
   if [[ ! -f "$staged_vendor_dir/ripgrep/$(ripgrep_runtime_dir)/$(ripgrep_binary_name)" ]]; then
@@ -1378,6 +1384,25 @@ ensure_mathcode_binary() {
     log "Downloaded MathCode WebUI binary was not executable."
     exit 1
   fi
+  if [[ ! -f "$staged_metadata_path" || -L "$staged_metadata_path" ]]; then
+    rm -rf "$temp_dir"
+    log "Downloaded release archive did not include valid release metadata."
+    exit 1
+  fi
+  staged_tag="$(metadata_file_value "$staged_metadata_path" release_tag)" || staged_tag=""
+  staged_generation="$(metadata_file_value "$staged_metadata_path" runtime_generation)" || staged_generation=""
+  staged_binary_sha="$(metadata_file_value "$staged_metadata_path" mathcode_sha256)" || staged_binary_sha=""
+  staged_webui_sha="$(metadata_file_value "$staged_metadata_path" mathcode_webui_sha256)" || staged_webui_sha=""
+  if [[ "$staged_tag" != "$RELEASE_TAG" ]] || \
+     [[ "$staged_generation" != "$RELEASE_RUNTIME_GENERATION" ]] || \
+     [[ ! "$staged_binary_sha" =~ ^[0-9a-f]{64}$ ]] || \
+     [[ ! "$staged_webui_sha" =~ ^[0-9a-f]{64}$ ]] || \
+     [[ "$(file_sha256 "$staged_binary_path")" != "$staged_binary_sha" ]] || \
+     [[ "$(file_sha256 "$staged_webui_binary_path")" != "$staged_webui_sha" ]]; then
+    rm -rf "$temp_dir"
+    log "Downloaded release archive metadata did not match the expected runtime."
+    exit 1
+  fi
   if ! ripgrep_binary_works "$staged_vendor_dir/ripgrep/$(ripgrep_runtime_dir)/$(ripgrep_binary_name)"; then
     rm -rf "$temp_dir"
     log "Downloaded bundled ripgrep did not start successfully."
@@ -1394,11 +1419,15 @@ ensure_mathcode_binary() {
   metadata_path="$(release_metadata_file)"
   metadata_backup="$backup_root/.mathcode-release"
 
-  cp "$staged_binary_path" "$temp_binary_path"
-  cp "$staged_webui_binary_path" "$temp_webui_binary_path"
-  cp -R "$staged_vendor_dir/." "$temp_vendor_dir/"
-  chmod 755 "$temp_binary_path" "$temp_webui_binary_path"
-  chmod -R u+rwX,go+rX "$temp_vendor_dir"
+  if ! cp "$staged_binary_path" "$temp_binary_path" || \
+     ! cp "$staged_webui_binary_path" "$temp_webui_binary_path" || \
+     ! cp -R "$staged_vendor_dir/." "$temp_vendor_dir/" || \
+     ! chmod 755 "$temp_binary_path" "$temp_webui_binary_path" || \
+     ! chmod -R u+rwX,go+rX "$temp_vendor_dir"; then
+    rm -rf "$temp_dir" "$temp_binary_path" "$temp_webui_binary_path" "$temp_vendor_dir" "$backup_root"
+    log "Downloaded release archive could not stage the replacement runtime."
+    exit 1
+  fi
 
   if ! backup_artifact "$binary_path" "$binary_backup" || \
      ! backup_artifact "$webui_binary_path" "$webui_backup" || \
