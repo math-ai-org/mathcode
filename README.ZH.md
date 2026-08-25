@@ -25,10 +25,15 @@ goal、验证候选源码、检索声明并严格验证最终证明。
 ```bash
 git clone https://github.com/math-ai-org/mathcode.git
 cd mathcode
-bash setup.sh
+bash setup.sh --with-lean
 codex auth login
 mathcode
 ```
+
+如果想先安装不含 Lean/Mathlib 的轻量版本，可运行
+`bash setup.sh --without-lean`；之后可用 `bash setup.sh --install-lean`
+补装，第一次获准调用本地 Lean 功能时也会提示安装。交互式运行
+`bash setup.sh` 会询问安装方式，默认选择完整安装。
 
 `setup.sh` 会准备发行版 checkout：下载或修复 bundle 内运行时，准备本地配置，并为后续 shell 安装 user-local 的 `mathcode` 启动命令。Linux 上还会在 bootstrap Lean workspace 前要求 `bwrap`（`bubblewrap` 包）和 `socat`。
 
@@ -57,6 +62,8 @@ mathcode
 
 Lean 工具链：
 
+- 可用 `--with-lean` 完整安装、用 `--without-lean` 延后安装，并可在之后通过
+  `--install-lean` 或第一次获准使用本地 Lean 功能时补装
 - 自带版本化的 `lean-workspace/lake-manifest.json`，让 setup 和本地运行使用
   当前 release 锁定的依赖图
 - setup 会在需要时物化空的受管 `VaultLibs/UserVaultLibs/` 骨架；源码构建主机
@@ -96,6 +103,7 @@ setup 只会覆盖它自己之前创建过的 launcher 文件，避免覆盖已�
 ### 维护命令
 
 ```bash
+bash setup.sh --install-lean  # 补装或修复可选的 Lean/Mathlib 支持
 bash setup.sh --status   # 检查二进制和依赖是否健康
 bash setup.sh --clean    # 删除安装产物，但保留证明结果和 vault 数据
 bash setup.sh --help     # 查看全部 setup 参数
@@ -106,6 +114,7 @@ bash setup.sh --help     # 查看全部 setup 参数
 - `./mathcode --version` 和 checksum 是否匹配当前 release tag 的 metadata
 - `./mathcode-webui` 是否匹配记录的 release metadata
 - 当前平台的 bundled `rg` 是否可执行并能输出 ripgrep 版本信息
+- 可选 Lean 支持当前是已就绪、已延后、不完整，还是尚未安装
 
 `setup.sh --clean` 会保留 `LeanFormalizations/`、vault 里的用户输出和当前
 release 锁定的 Lake manifest。
@@ -118,7 +127,7 @@ release 锁定的 Lake manifest。
 - macOS (arm64)，或基于 glibc 且支持 AVX2 的 Linux（x86_64，使用 Ubuntu 22.04 构建）
 - `curl`，用于 setup/bootstrap 下载
 - `shasum` 或 `sha256sum`，用于校验 release archive 并写入 metadata
-- 足够的磁盘空间用于 bundle、Lean 工具链和 Mathlib cache
+- 足够的磁盘空间用于 bundle；启用 Lean 支持时还需容纳 Lean 工具链和 Mathlib cache
 - 如果你想走默认后端和默认数学流程，需要本机安装 `codex` CLI
 - Python 3.12+（可选，仅 `tools/` 目录下的分析脚本需要）
 

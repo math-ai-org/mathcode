@@ -26,10 +26,16 @@ finished proof interactively.
 ```bash
 git clone https://github.com/math-ai-org/mathcode.git
 cd mathcode
-bash setup.sh
+bash setup.sh --with-lean
 codex auth login
 mathcode
 ```
+
+For a smaller installation without Lean/Mathlib, use
+`bash setup.sh --without-lean`. You can add it later with
+`bash setup.sh --install-lean`; the first approved local Lean feature call also
+offers to install it. Running `bash setup.sh` interactively asks which mode to
+use and defaults to the full installation.
 
 `setup.sh` prepares the release checkout for daily use. It downloads or repairs
 the bundled runtime, prepares local configuration, and installs a user-local
@@ -68,6 +74,8 @@ Local configuration:
 
 Lean toolchain:
 
+- can be installed with `--with-lean`, deferred with `--without-lean`, and
+  added later with `--install-lean` or on the first approved local Lean use
 - ships the versioned `lean-workspace/lake-manifest.json` so setup and local
   runs use the dependency graph locked by the release
 - setup materializes an empty managed `VaultLibs/UserVaultLibs/` skeleton when
@@ -115,6 +123,7 @@ file; the managed system Lean/Lake values use the dual-parser encoding above.
 ### Maintenance Commands
 
 ```bash
+bash setup.sh --install-lean  # add or repair optional Lean/Mathlib support
 bash setup.sh --status   # check whether the binary/tooling look healthy
 bash setup.sh --clean    # remove install artifacts, keep proofs/vault data
 bash setup.sh --help     # show all setup flags
@@ -126,6 +135,7 @@ bash setup.sh --help     # show all setup flags
 - `./mathcode-webui` matches the recorded release metadata
 - the current platform's bundled `rg` is executable and reports a ripgrep
   version banner
+- optional Lean support is ready, deferred, incomplete, or not yet installed
 
 `setup.sh --clean` preserves user outputs in `LeanFormalizations/`, vault
 data, and the release's locked Lake manifest. If setup previously recorded a managed launcher, later `--status` and
@@ -136,7 +146,8 @@ data, and the release's locked Lake manifest. If setup previously recorded a man
 - macOS (arm64) or glibc-based Linux (x86_64 with AVX2, built on Ubuntu 22.04)
 - `curl` for setup/bootstrap downloads
 - `shasum` or `sha256sum` for release archive verification and metadata
-- enough disk space for the bundle, Lean toolchain, and Mathlib caches
+- enough disk space for the bundle, plus the Lean toolchain and Mathlib caches
+  when Lean support is enabled
 - `codex` CLI if you want the default backend and default math flow
 - Python 3.12+ (optional, only needed for analysis tools in `tools/`)
 

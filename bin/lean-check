@@ -58,6 +58,7 @@ local_elan_tool_path() {
 }
 
 if local_elan_tool_path lean >/dev/null && local_elan_tool_path lake >/dev/null; then
+  unset ELAN_TOOLCHAIN
   export ELAN_HOME="$LOCAL_ELAN_HOME"
   export PATH="$LOCAL_ELAN_BIN:$PATH"
 fi

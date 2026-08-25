@@ -4,15 +4,24 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RELEASE_REPO="math-ai-org/mathcode"
 RELEASE_TAG="v0.3.0"
+RELEASE_RUNTIME_GENERATION="v0.3.0-optional-lean-1"
 LOCAL_ELAN_HOME="$ROOT_DIR/.local/elan"
 LOCAL_ELAN_BIN="$LOCAL_ELAN_HOME/bin"
 LEAN_WORKSPACE_DIR="$ROOT_DIR/lean-workspace"
+LEAN_DEFERRED_MARKER="$ROOT_DIR/.mathcode-lean-deferred"
+LEAN_READY_MARKER="$ROOT_DIR/.mathcode-lean-ready"
+LEAN_INSTALL_LOCK_DIR="$ROOT_DIR/.mathcode-lean-install.lock"
+LOCAL_RELEASE_ASSET_DIR="$ROOT_DIR/release-assets"
 MATHLIB_CACHE_MIN_KB=$((8 * 1024 * 1024))
 MATHCODE_COMMAND_AVAILABLE_NOW=0
 MATHCODE_USER_LAUNCHER_INSTALLED=0
 MATHCODE_COMMAND_READY_AFTER_RELOAD=0
 USING_SYSTEM_LEAN=0
 MATHCODE_LAUNCHER_MARKER="# MathCode launcher (managed by setup.sh)"
+LEAN_INSTALL_LOCK_HELD=0
+LEAN_INSTALL_LOCK_TOKEN=""
+LEAN_INSTALL_LOCK_WAITED=0
+USE_LOCAL_RELEASE_ASSETS=0
 
 resolve_command_path() {
   local cmd_path="$1"
@@ -73,6 +82,23 @@ local_elan_artifacts_present() {
   [[ -e "$LOCAL_ELAN_BIN/elan" || -e "$LOCAL_ELAN_BIN/elan.exe" || \
      -e "$LOCAL_ELAN_BIN/lean" || -e "$LOCAL_ELAN_BIN/lean.exe" || \
      -e "$LOCAL_ELAN_BIN/lake" || -e "$LOCAL_ELAN_BIN/lake.exe" ]]
+}
+
+lean_ready_marker_matches_release() {
+  [[ -f "$LEAN_READY_MARKER" && ! -L "$LEAN_READY_MARKER" ]] &&
+    grep -Fxq "release_tag=$RELEASE_TAG" "$LEAN_READY_MARKER" 2>/dev/null
+}
+
+lean_runtime_pair_available_for_status() {
+  if local_elan_tool_path lean >/dev/null && local_elan_tool_path lake >/dev/null; then
+    return 0
+  fi
+  if use_system_lean_requested && \
+     { [[ -n "$INITIAL_LEAN_CMD" && -n "$INITIAL_LAKE_CMD" ]] || \
+       { have_command lean && have_command lake; }; }; then
+    return 0
+  fi
+  return 1
 }
 
 use_system_lean_requested() {
@@ -583,19 +609,187 @@ remove_managed_mathcode_command() {
   fi
 }
 
+remove_lean_install_lock_owned_by() {
+  local expected_token="$1"
+  local current_token=""
+  local recovery_path="$ROOT_DIR/.mathcode-lean-install.owner.$$.$RANDOM.$RANDOM"
+
+  if [[ -L "$LEAN_INSTALL_LOCK_DIR" || ! -d "$LEAN_INSTALL_LOCK_DIR" || \
+        ! -f "$LEAN_INSTALL_LOCK_DIR/owner" || -L "$LEAN_INSTALL_LOCK_DIR/owner" ]]; then
+    log "Lean install lock is incomplete or unsafe; refusing to remove it."
+    return 1
+  fi
+  IFS= read -r current_token < "$LEAN_INSTALL_LOCK_DIR/owner" || true
+  if [[ "$current_token" != "$expected_token" ]]; then
+    log "Lean install lock ownership changed; refusing to remove another owner's lock."
+    return 1
+  fi
+
+  if ! mv "$LEAN_INSTALL_LOCK_DIR/owner" "$recovery_path"; then
+    log "Could not stage the Lean install lock owner for exact-token release."
+    return 1
+  fi
+  if rmdir "$LEAN_INSTALL_LOCK_DIR" 2>/dev/null; then
+    rm -f "$recovery_path"
+    return 0
+  fi
+
+  if [[ ! -L "$LEAN_INSTALL_LOCK_DIR" && -d "$LEAN_INSTALL_LOCK_DIR" && \
+        ! -e "$LEAN_INSTALL_LOCK_DIR/owner" && ! -L "$LEAN_INSTALL_LOCK_DIR/owner" ]] && \
+     mv "$recovery_path" "$LEAN_INSTALL_LOCK_DIR/owner"; then
+    log "Lean install lock contains unexpected entries; the exact owner record was restored."
+  else
+    log "Lean install lock release failed; owner recovery record kept at: $recovery_path"
+  fi
+  return 1
+}
+
+release_lean_install_lock() {
+  if [[ "$LEAN_INSTALL_LOCK_HELD" != "1" ]]; then
+    return
+  fi
+  if ! remove_lean_install_lock_owned_by "$LEAN_INSTALL_LOCK_TOKEN"; then
+    LEAN_INSTALL_LOCK_HELD=0
+    return 1
+  fi
+  LEAN_INSTALL_LOCK_HELD=0
+  LEAN_INSTALL_LOCK_TOKEN=""
+}
+
+acquire_lean_install_lock() {
+  local attempts=0 missing_owner_attempts=0 lock_pid="" lock_token=""
+
+  while ! mkdir -m 700 "$LEAN_INSTALL_LOCK_DIR" 2>/dev/null; do
+    if [[ -L "$LEAN_INSTALL_LOCK_DIR" || ! -d "$LEAN_INSTALL_LOCK_DIR" ]]; then
+      log "Lean install lock path is not a safe directory: $LEAN_INSTALL_LOCK_DIR"
+      exit 1
+    fi
+
+    lock_token=""
+    if [[ -f "$LEAN_INSTALL_LOCK_DIR/owner" && ! -L "$LEAN_INSTALL_LOCK_DIR/owner" ]]; then
+      missing_owner_attempts=0
+      IFS= read -r lock_token < "$LEAN_INSTALL_LOCK_DIR/owner" || true
+    elif [[ -e "$LEAN_INSTALL_LOCK_DIR/owner" || -L "$LEAN_INSTALL_LOCK_DIR/owner" ]]; then
+      log "Lean install lock has an unsafe owner record: $LEAN_INSTALL_LOCK_DIR"
+      exit 1
+    else
+      LEAN_INSTALL_LOCK_WAITED=1
+      missing_owner_attempts=$((missing_owner_attempts + 1))
+      if [[ "$missing_owner_attempts" -ge 3 ]]; then
+        if rmdir "$LEAN_INSTALL_LOCK_DIR" 2>/dev/null; then
+          log "Recovered an abandoned empty Lean install lock."
+          missing_owner_attempts=0
+          continue
+        fi
+        if [[ ! -f "$LEAN_INSTALL_LOCK_DIR/owner" || -L "$LEAN_INSTALL_LOCK_DIR/owner" ]]; then
+          log "Lean install lock stayed uninitialized and contains unexpected entries: $LEAN_INSTALL_LOCK_DIR"
+          exit 1
+        fi
+        missing_owner_attempts=0
+        continue
+      fi
+      attempts=$((attempts + 1))
+      if [[ "$((attempts % 30))" -eq 1 ]]; then
+        log "Waiting for another MathCode process to initialize the Lean install lock ..."
+      fi
+      sleep 1
+      continue
+    fi
+    lock_pid="${lock_token%%:*}"
+    case "$lock_pid" in
+      ''|*[!0-9]*)
+        log "Lean install lock has an invalid owner record: $LEAN_INSTALL_LOCK_DIR"
+        exit 1
+        ;;
+      *)
+        if ! kill -0 "$lock_pid" 2>/dev/null; then
+          if ! remove_lean_install_lock_owned_by "$lock_token"; then
+            exit 1
+          fi
+          continue
+        else
+          LEAN_INSTALL_LOCK_WAITED=1
+        fi
+        ;;
+    esac
+
+    attempts=$((attempts + 1))
+    if [[ "$attempts" -ge 3600 ]]; then
+      log "Timed out waiting for another MathCode process to finish installing Lean."
+      exit 1
+    fi
+    if [[ "$((attempts % 30))" -eq 1 ]]; then
+      log "Waiting for another MathCode process to finish installing Lean ..."
+    fi
+    sleep 1
+  done
+
+  LEAN_INSTALL_LOCK_TOKEN="$$:${RANDOM}:${RANDOM}"
+  if ! printf '%s\n' "$LEAN_INSTALL_LOCK_TOKEN" > "$LEAN_INSTALL_LOCK_DIR/owner"; then
+    rmdir "$LEAN_INSTALL_LOCK_DIR" 2>/dev/null || true
+    log "Could not record the Lean install lock owner."
+    exit 1
+  fi
+  LEAN_INSTALL_LOCK_HELD=1
+  trap 'release_lean_install_lock || true' EXIT
+}
+
+mark_lean_deferred() {
+  local temp_path
+  rm -f "$LEAN_READY_MARKER"
+  temp_path="$(mktemp "$ROOT_DIR/.mathcode-lean-deferred.XXXXXX")"
+  {
+    printf 'release_tag=%s\n' "$RELEASE_TAG"
+    printf 'install_command=bash setup.sh --install-lean\n'
+  } > "$temp_path"
+  chmod 600 "$temp_path"
+  mv -f "$temp_path" "$LEAN_DEFERRED_MARKER"
+}
+
+mark_lean_ready() {
+  local temp_path
+  temp_path="$(mktemp "$ROOT_DIR/.mathcode-lean-ready.XXXXXX")"
+  {
+    printf 'release_tag=%s\n' "$RELEASE_TAG"
+  } > "$temp_path"
+  chmod 600 "$temp_path"
+  mv -f "$temp_path" "$LEAN_READY_MARKER"
+  rm -f "$LEAN_DEFERRED_MARKER"
+}
+
+install_lean_support() {
+  acquire_lean_install_lock
+  if [[ "$LEAN_INSTALL_LOCK_WAITED" == "1" ]] && \
+     lean_ready_marker_matches_release && lean_runtime_pair_available_for_status; then
+    log "Lean/Mathlib installation was completed by another MathCode process."
+    release_lean_install_lock
+    return
+  fi
+  mark_lean_deferred
+  ensure_lean
+  persist_lean_runtime_selection
+  ensure_lean_sandbox_dependencies
+  bootstrap_lean_workspace
+  mark_lean_ready
+  release_lean_install_lock
+}
+
 show_help() {
   cat <<'EOF'
 Usage: bash setup.sh [OPTIONS]
 
-Set up MathCode by downloading the release binaries, bootstrapping the
-Lean toolchain, installing a user-local `mathcode` launcher, and
-fetching the Mathlib cache.
+Set up MathCode with or without the optional local Lean/Mathlib runtime.
+With no option, an interactive terminal asks which mode to use; a
+non-interactive invocation keeps the backward-compatible full install.
 
 Options:
-  --help     Show this help message and exit
-  --clean    Remove install artifacts (binary, Lean toolchain, .env, caches)
-             and exit. User outputs are kept.
-  --status   Show what is currently installed and exit
+  --with-lean     Install MathCode plus the pinned Lean/Mathlib runtime
+  --without-lean  Install MathCode CLI/WebUI only; defer Lean installation
+  --install-lean  Add or repair the pinned Lean/Mathlib runtime later
+  --help          Show this help message and exit
+  --clean         Remove install artifacts (binary, Lean toolchain, .env,
+                  caches, and install markers) and exit. User outputs are kept.
+  --status        Show what is currently installed and exit
 
 Environment variables:
   MATHCODE_SKIP_MATHLIB_CACHE=1   Skip the ~8 GB Mathlib cache download
@@ -605,13 +799,50 @@ Environment variables:
   MATHCODE_SKIP_USER_BIN=1        Skip installing the user-local mathcode launcher
 
 Examples:
-  bash setup.sh            # full install
-  bash setup.sh --status   # check installation state
-  bash setup.sh --clean    # remove install artifacts, keep proofs/vaults
+  bash setup.sh --with-lean     # full install
+  bash setup.sh --without-lean  # lightweight CLI/WebUI install
+  bash setup.sh --install-lean  # add Lean/Mathlib later
+  bash setup.sh --status        # check installation state
+  bash setup.sh --clean         # remove install artifacts, keep proofs/vaults
 EOF
 }
 
 do_clean() {
+  local lock_pid="" lock_token=""
+  if [[ -e "$LEAN_INSTALL_LOCK_DIR" || -L "$LEAN_INSTALL_LOCK_DIR" ]]; then
+    if [[ -L "$LEAN_INSTALL_LOCK_DIR" || ! -d "$LEAN_INSTALL_LOCK_DIR" ]]; then
+      log "Cannot clean an unsafe Lean install lock: $LEAN_INSTALL_LOCK_DIR"
+      return 1
+    fi
+    if [[ ! -e "$LEAN_INSTALL_LOCK_DIR/owner" && ! -L "$LEAN_INSTALL_LOCK_DIR/owner" ]]; then
+      if ! rmdir "$LEAN_INSTALL_LOCK_DIR" 2>/dev/null; then
+        log "Cannot clean an uninitialized Lean install lock with unexpected entries: $LEAN_INSTALL_LOCK_DIR"
+        return 1
+      fi
+    elif [[ ! -f "$LEAN_INSTALL_LOCK_DIR/owner" || -L "$LEAN_INSTALL_LOCK_DIR/owner" ]]; then
+      log "Cannot clean an unsafe Lean install lock owner: $LEAN_INSTALL_LOCK_DIR"
+      return 1
+    else
+    IFS= read -r lock_token < "$LEAN_INSTALL_LOCK_DIR/owner" || true
+    lock_pid="${lock_token%%:*}"
+    case "$lock_pid" in
+      ''|*[!0-9]*)
+        log "Cannot clean an invalid Lean install lock: $LEAN_INSTALL_LOCK_DIR"
+        return 1
+        ;;
+      *)
+        if kill -0 "$lock_pid" 2>/dev/null; then
+          log "Cannot clean while process $lock_pid is installing Lean."
+          return 1
+        fi
+        remove_lean_install_lock_owned_by "$lock_token" || {
+          log "Cannot safely recover the stale Lean install lock: $LEAN_INSTALL_LOCK_DIR"
+          return 1
+        }
+        ;;
+    esac
+    fi
+  fi
   log "Cleaning MathCode install artifacts from $ROOT_DIR ..."
   remove_managed_mathcode_command
   rm -rf "$ROOT_DIR/mathcode"
@@ -624,6 +855,7 @@ do_clean() {
   rm -rf "$LEAN_WORKSPACE_DIR/.lake"
   rm -rf "$LEAN_WORKSPACE_DIR/lake-packages"
   rm -rf "$LEAN_WORKSPACE_DIR/build"
+  rm -f "$LEAN_DEFERRED_MARKER" "$LEAN_READY_MARKER"
   log "Kept user outputs in LeanFormalizations/ and ObsidianVault/."
   log "Done. Run 'bash setup.sh' to reinstall."
 }
@@ -727,8 +959,22 @@ do_status() {
        { [[ -n "$INITIAL_LEAN_CMD" ]] || [[ -n "$INITIAL_LAKE_CMD" ]] || \
          have_command lean || have_command lake; }; then
     status_line "Lean:" "incomplete system pair (local .local/elan will be installed)"
+  elif [[ -f "$LEAN_DEFERRED_MARKER" ]]; then
+    status_line "Lean:" "deferred (run bash setup.sh --install-lean)"
   else
     status_line "Lean:" "not installed (local .local/elan will be installed)"
+  fi
+
+  if lean_ready_marker_matches_release && lean_runtime_pair_available_for_status; then
+    status_line "Lean workspace:" "ready"
+  elif lean_ready_marker_matches_release; then
+    status_line "Lean workspace:" "incomplete (run bash setup.sh --install-lean)"
+  elif [[ -e "$LEAN_READY_MARKER" || -L "$LEAN_READY_MARKER" ]]; then
+    status_line "Lean workspace:" "stale or unsafe (run bash setup.sh --install-lean)"
+  elif [[ -f "$LEAN_DEFERRED_MARKER" ]]; then
+    status_line "Lean workspace:" "deferred"
+  else
+    status_line "Lean workspace:" "not prepared"
   fi
 
   if [[ -f "$ROOT_DIR/.env" ]]; then
@@ -814,10 +1060,46 @@ bundled_ripgrep_present() {
   ripgrep_binary_works "$(bundled_ripgrep_path)"
 }
 
+select_release_asset_source() {
+  local archive_name="$1"
+  local local_archive="$LOCAL_RELEASE_ASSET_DIR/$archive_name"
+  local local_checksums="$LOCAL_RELEASE_ASSET_DIR/SHA256SUMS.txt"
+  local archive_present=0 checksums_present=0
+
+  USE_LOCAL_RELEASE_ASSETS=0
+  if [[ ! -e "$LOCAL_RELEASE_ASSET_DIR" && ! -L "$LOCAL_RELEASE_ASSET_DIR" ]]; then
+    return
+  fi
+  if [[ -L "$LOCAL_RELEASE_ASSET_DIR" || ! -d "$LOCAL_RELEASE_ASSET_DIR" ]]; then
+    log "Local release asset path must be a real directory: $LOCAL_RELEASE_ASSET_DIR"
+    return 1
+  fi
+  [[ -f "$local_archive" && ! -L "$local_archive" ]] && archive_present=1
+  [[ -f "$local_checksums" && ! -L "$local_checksums" ]] && checksums_present=1
+  if [[ "$archive_present" == "1" && "$checksums_present" == "1" ]]; then
+    USE_LOCAL_RELEASE_ASSETS=1
+    return
+  fi
+  if [[ "$archive_present" != "$checksums_present" ]]; then
+    log "Local release assets are incomplete; require both $local_archive and $local_checksums."
+    return 1
+  fi
+}
+
 download_release_file() {
   local filename="$1"
   local output_path="$2"
   local url="https://github.com/$RELEASE_REPO/releases/download/$RELEASE_TAG/$filename"
+  local local_path="$LOCAL_RELEASE_ASSET_DIR/$filename"
+
+  if [[ "$USE_LOCAL_RELEASE_ASSETS" == "1" ]]; then
+    if ! cp "$local_path" "$output_path"; then
+      log "Failed to copy local release asset: $local_path"
+      return 1
+    fi
+    log "Using local release asset: $local_path"
+    return 0
+  fi
 
   ensure_curl
 
@@ -930,6 +1212,7 @@ write_release_metadata() {
   temp_path="$(mktemp "$ROOT_DIR/.mathcode-release.XXXXXX")" || return 1
   {
     printf 'release_tag=%s\n' "$RELEASE_TAG"
+    printf 'runtime_generation=%s\n' "$RELEASE_RUNTIME_GENERATION"
     printf 'mathcode_sha256=%s\n' "$binary_sha"
     printf 'mathcode_webui_sha256=%s\n' "$webui_sha"
   } >"$temp_path" || {
@@ -977,10 +1260,17 @@ mathcode_binary_version_matches_release() {
   [[ "$actual_version" == "$expected_version" ]]
 }
 
+release_metadata_generation_matches() {
+  local recorded_generation
+  recorded_generation="$(release_metadata_value runtime_generation)" || return 1
+  [[ "$recorded_generation" == "$RELEASE_RUNTIME_GENERATION" ]]
+}
+
 mathcode_binary_matches_release() {
   local binary_path="$1"
   local recorded_tag expected_version actual_version recorded_sha actual_sha
   mathcode_binary_version_matches_release "$binary_path" || return 1
+  release_metadata_generation_matches || return 1
   recorded_tag="$(release_metadata_value release_tag)" || return 1
   expected_version="$(normalize_version_tag "$RELEASE_TAG")" || return 1
   actual_version="$(normalize_version_tag "$recorded_tag")" || return 1
@@ -995,6 +1285,7 @@ webui_binary_matches_release() {
   local webui_binary_path="$1"
   local recorded_tag expected_version actual_version recorded_sha actual_sha
   [[ -x "$webui_binary_path" ]] || return 1
+  release_metadata_generation_matches || return 1
   recorded_tag="$(release_metadata_value release_tag)" || return 1
   expected_version="$(normalize_version_tag "$RELEASE_TAG")" || return 1
   actual_version="$(normalize_version_tag "$recorded_tag")" || return 1
@@ -1028,11 +1319,18 @@ ensure_mathcode_binary() {
 
   archive_name="$(release_archive_name)"
   bundle_name="$(release_bundle_name)"
+  if ! select_release_asset_source "$archive_name"; then
+    exit 1
+  fi
   temp_dir="$(mktemp -d "${TMPDIR:-/tmp}/mathcode-bootstrap.XXXXXX")"
   archive_path="$temp_dir/$archive_name"
   checksum_path="$temp_dir/SHA256SUMS.txt"
 
-  log "Downloading MathCode release from GitHub Releases ($RELEASE_TAG, $(normalize_os)/$(normalize_arch))"
+  if [[ "$USE_LOCAL_RELEASE_ASSETS" == "1" ]]; then
+    log "Restoring MathCode from local release assets ($RELEASE_TAG, $(normalize_os)/$(normalize_arch))"
+  else
+    log "Downloading MathCode release from GitHub Releases ($RELEASE_TAG, $(normalize_os)/$(normalize_arch))"
+  fi
   if ! download_release_file "$archive_name" "$archive_path"; then
     rm -rf "$temp_dir"
     exit 1
@@ -1153,7 +1451,7 @@ LEAN_PROJECT_DIR=$quoted_lean_project_dir
 MATHCODE_LEAN_REPL=1
 PATHS
 
-  log "Created .env with the Lean server enabled by default."
+  log "Created .env; the Lean server will be enabled when Lean support is available."
 }
 
 install_local_lean() {
@@ -1181,28 +1479,92 @@ install_local_lean() {
 }
 
 use_local_lean_paths() {
+  unset ELAN_TOOLCHAIN
   export ELAN_HOME="$LOCAL_ELAN_HOME"
   prepend_to_path "$LOCAL_ELAN_BIN"
 }
 
+select_concrete_system_lean_paths() {
+  local system_lean="$1"
+  local system_lake="$2"
+  local lean_toolchain expected_version lean_prefix candidate_lean candidate_lake
+  local lean_version lake_version_output lake_lean_version
+
+  [[ -f "$system_lean" && -x "$system_lean" &&
+     -f "$system_lake" && -x "$system_lake" ]] || return 1
+  [[ -f "$LEAN_WORKSPACE_DIR/lean-toolchain" ]] || return 1
+  lean_toolchain="$(<"$LEAN_WORKSPACE_DIR/lean-toolchain")"
+  lean_toolchain="${lean_toolchain%$'\r'}"
+  if [[ -z "$lean_toolchain" || "$lean_toolchain" == *$'\n'* ||
+        "$lean_toolchain" == *$'\r'* || "$lean_toolchain" != *:* ]]; then
+    return 1
+  fi
+  expected_version="${lean_toolchain##*:}"
+  expected_version="${expected_version#v}"
+  case "$expected_version" in
+    ''|*[!0-9A-Za-z_.-]*) return 1 ;;
+  esac
+
+  if ! lean_prefix="$(
+    cd "$LEAN_WORKSPACE_DIR"
+    unset ELAN_TOOLCHAIN
+    "$system_lean" --print-prefix 2>/dev/null
+  )"; then
+    return 1
+  fi
+  lean_prefix="${lean_prefix%$'\r'}"
+  if [[ -z "$lean_prefix" || "$lean_prefix" != /* ||
+        "$lean_prefix" == *$'\n'* || "$lean_prefix" == *$'\r'* ]]; then
+    return 1
+  fi
+
+  candidate_lean="$lean_prefix/bin/lean"
+  candidate_lake="$lean_prefix/bin/lake"
+  if [[ ! -f "$candidate_lean" || ! -x "$candidate_lean" ||
+        ! -f "$candidate_lake" || ! -x "$candidate_lake" ]]; then
+    return 1
+  fi
+
+  if ! lean_version="$(unset ELAN_TOOLCHAIN; "$candidate_lean" --short-version 2>/dev/null)"; then
+    return 1
+  fi
+  lean_version="${lean_version#v}"
+  lean_version="${lean_version%$'\r'}"
+  [[ "$lean_version" == "$expected_version" ]] || return 1
+
+  if ! lake_version_output="$(unset ELAN_TOOLCHAIN; "$candidate_lake" --version 2>&1)"; then
+    return 1
+  fi
+  lake_lean_version="$(printf '%s\n' "$lake_version_output" | sed -nE \
+    's/^.*\(Lean version v?([0-9A-Za-z_.-]+)\).*$/\1/p')"
+  [[ "$lake_lean_version" == "$expected_version" ]] || return 1
+
+  LEAN_CMD="$(resolve_command_path "$candidate_lean")"
+  LAKE_CMD="$(resolve_command_path "$candidate_lake")"
+  return 0
+}
+
 use_existing_system_lean_if_available() {
+  local system_lean system_lake
+
   if [[ -n "$INITIAL_LEAN_CMD" && -n "$INITIAL_LAKE_CMD" ]]; then
-    LEAN_CMD="$INITIAL_LEAN_CMD"
-    LAKE_CMD="$INITIAL_LAKE_CMD"
-    USING_SYSTEM_LEAN=1
-    log "Using existing Lean: $LEAN_CMD"
-    log "Using existing Lake: $LAKE_CMD"
-    return 0
+    system_lean="$INITIAL_LEAN_CMD"
+    system_lake="$INITIAL_LAKE_CMD"
+  elif have_command lean && have_command lake; then
+    system_lean="$(resolve_command_path "$(command -v lean)")"
+    system_lake="$(resolve_command_path "$(command -v lake)")"
+  else
+    return 1
   fi
-  if have_command lean && have_command lake; then
-    LEAN_CMD="$(resolve_command_path "$(command -v lean)")"
-    LAKE_CMD="$(resolve_command_path "$(command -v lake)")"
-    USING_SYSTEM_LEAN=1
-    log "Using existing Lean: $LEAN_CMD"
-    log "Using existing Lake: $LAKE_CMD"
-    return 0
+
+  if ! select_concrete_system_lean_paths "$system_lean" "$system_lake"; then
+    log "System Lean/Lake did not resolve to the pinned bundled toolchain; using local Lean instead."
+    return 1
   fi
-  return 1
+  USING_SYSTEM_LEAN=1
+  log "Using existing Lean: $LEAN_CMD"
+  log "Using existing Lake: $LAKE_CMD"
+  return 0
 }
 
 persist_lean_runtime_selection() {
@@ -1416,6 +1778,7 @@ bootstrap_lean_workspace() {
   )
 }
 
+SETUP_MODE=""
 for arg in "$@"; do
   case "$arg" in
     --help|-h)
@@ -1430,6 +1793,27 @@ for arg in "$@"; do
       do_status
       exit 0
       ;;
+    --with-lean)
+      if [[ -n "$SETUP_MODE" ]]; then
+        log "Choose exactly one install mode."
+        exit 1
+      fi
+      SETUP_MODE="with-lean"
+      ;;
+    --without-lean)
+      if [[ -n "$SETUP_MODE" ]]; then
+        log "Choose exactly one install mode."
+        exit 1
+      fi
+      SETUP_MODE="without-lean"
+      ;;
+    --install-lean)
+      if [[ -n "$SETUP_MODE" ]]; then
+        log "Choose exactly one install mode."
+        exit 1
+      fi
+      SETUP_MODE="install-lean"
+      ;;
     *)
       log "Unknown option: $arg"
       log "Run 'bash setup.sh --help' for usage."
@@ -1438,15 +1822,50 @@ for arg in "$@"; do
   esac
 done
 
+if [[ -z "$SETUP_MODE" ]]; then
+  if [[ -t 0 && -t 1 ]]; then
+    log "Choose an installation mode:"
+    log "  1) MathCode with Lean/Mathlib (full install, default)"
+    log "  2) MathCode without Lean/Mathlib (install it on first local Lean use)"
+    printf 'Selection [1/2]: '
+    IFS= read -r setup_selection || setup_selection=""
+    case "$setup_selection" in
+      ''|1) SETUP_MODE="with-lean" ;;
+      2) SETUP_MODE="without-lean" ;;
+      *)
+        log "Invalid selection: $setup_selection"
+        exit 1
+        ;;
+    esac
+  else
+    SETUP_MODE="with-lean"
+  fi
+fi
+
 ensure_mathcode_binary
 ensure_env_file
-ensure_lean
-persist_lean_runtime_selection
-ensure_lean_sandbox_dependencies
-bootstrap_lean_workspace
 install_mathcode_command
 
-log "Release setup complete."
+case "$SETUP_MODE" in
+  without-lean)
+    if lean_ready_marker_matches_release; then
+      log "Lean/Mathlib is already ready; --without-lean does not remove an existing installation."
+    else
+      mark_lean_deferred
+      log "Lean/Mathlib installation was deferred."
+      log "Run 'bash setup.sh --install-lean' later, or approve a local Lean tool call to install it automatically."
+    fi
+    ;;
+  with-lean|install-lean)
+    install_lean_support
+    ;;
+esac
+
+if [[ "$SETUP_MODE" == "install-lean" ]]; then
+  log "Lean/Mathlib installation complete."
+else
+  log "Release setup complete."
+fi
 if [[ "$MATHCODE_COMMAND_AVAILABLE_NOW" == "1" ]]; then
   log "Run: mathcode"
 elif [[ "$MATHCODE_USER_LAUNCHER_INSTALLED" == "1" ]]; then

@@ -33,10 +33,12 @@ local_elan_tool_path() {
 }
 
 if local_elan_tool_path lean >/dev/null && local_elan_tool_path lake >/dev/null; then
+  unset ELAN_TOOLCHAIN
   export ELAN_HOME="$DIST_DIR/.local/elan"
   export PATH="$DIST_DIR/.local/elan/bin:$PATH"
 fi
 
+export MATHCODE_RELEASE_ROOT="$DIST_DIR"
 export LEAN_PROJECT_DIR="${LEAN_PROJECT_DIR:-$DIST_DIR/lean-workspace}"
 
 if [[ "${1:-}" == "webui" || "${1:-}" == "--webui" ]]; then
