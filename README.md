@@ -105,7 +105,7 @@ already on the current shell's `PATH`, so future shells keep resolving
 `mathcode`.
 
 If the selected launcher directory cannot be used, setup skips only the
-launcher step and continues the rest of installation.
+launcher step and continues the rest of the installation.
 
 When `MATHCODE_SETUP_USE_SYSTEM_LEAN=1`, setup captures system `lean` and
 `lake` before changing into the bundle root and records their validated absolute
