@@ -456,15 +456,15 @@ mathcode
 
 如果你还在刚执行完 setup 的同一个 shell 里，先用 `./run` 也可以；reload shell 之后再直接用 `mathcode`。
 
-发行版的 `.env` 模板现在会选择 GPT-5.6 Sol 与 xhigh 推理强度。若要把相同
-配置应用到由旧版发行包创建的现有 `.env`，并同时选择 CLI 的最高 effort
+本仓库的 `.env.example` 现在会选择 GPT-6 Astra 与 medium 推理强度。若要把相同
+配置应用到由旧版发行包创建的现有 `.env`，并同时选择 CLI 的 medium effort
 level，请设置：
 
 ```env
-OPENAI_MODEL=gpt-5.6-sol
-OPENAI_SMALL_MODEL=gpt-5.6-sol
-OPENAI_REASONING_EFFORT=xhigh
-MATHCODE_EFFORT_LEVEL=max
+OPENAI_MODEL=gpt-6-astra
+OPENAI_SMALL_MODEL=gpt-6-astra
+OPENAI_REASONING_EFFORT=medium
+MATHCODE_EFFORT_LEVEL=medium
 ```
 
 如果你想改成 Anthropic 兼容后端，可以设置：
@@ -480,8 +480,14 @@ ANTHROPIC_MODEL=claude-sonnet-4-5
 交互式 `/webui` slash-command 启动时，它选定的 WebUI port 和 workspace
 会覆盖该 `.env` 中同名的键。
 
-WebUI 路由默认值独立于 CLI `.env`：全新的 WebUI 设置使用
-`openai` / `gpt-5.6-sol`，已有保存的 provider/model 选择会被保留，不会重写。
+WebUI 路由默认值独立于 CLI `.env`。请在 WebUI 设置中选择 provider `openai`、
+model `gpt-6-astra` 和 reasoning effort `medium`。已有保存的路由会被保留。
+全新 WebUI 的默认值和内置 Astra 能力信息需要包含 Astra 更新的运行时二进制；
+修改本仓库的模板不会更新已安装的二进制或已经发布的 release 压缩包。
+
+对于单独启动的 paper 任务，可按需在现有 `.env` 中显式设置
+`MATHCODE_PAPER_MODEL=gpt-6-astra` 和
+`MATHCODE_PAPER_REASONING_EFFORT=medium`。Lean 编译验证本身不选择模型。
 
 ### WebUI Provider 密钥
 
