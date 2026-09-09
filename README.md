@@ -502,15 +502,15 @@ mathcode
 
 If you are still in the same shell where setup just finished, `./run` is the immediate fallback until you reload your shell profile.
 
-The packaged `.env` template now selects GPT-5.6 Sol at xhigh reasoning effort.
+This repository's `.env.example` now selects GPT-6 Astra at medium reasoning effort.
 To apply the same values to an existing `.env` created by an older release and
-also select the CLI's maximum effort level, set:
+also select medium for the CLI effort level, set:
 
 ```env
-OPENAI_MODEL=gpt-5.6-sol
-OPENAI_SMALL_MODEL=gpt-5.6-sol
-OPENAI_REASONING_EFFORT=xhigh
-MATHCODE_EFFORT_LEVEL=max
+OPENAI_MODEL=gpt-6-astra
+OPENAI_SMALL_MODEL=gpt-6-astra
+OPENAI_REASONING_EFFORT=medium
+MATHCODE_EFFORT_LEVEL=medium
 ```
 
 To use an Anthropic-compatible backend instead, set:
@@ -526,9 +526,17 @@ The release `./run` wrapper sources the bundle `.env` before launching
 MathCode. For interactive `/webui` slash-command launches, the selected WebUI
 port and workspace override same-named keys from that `.env`.
 
-The WebUI route default is separate from the CLI `.env`: fresh WebUI settings
-use `openai` / `gpt-5.6-sol`, while an existing saved provider/model selection
-is preserved rather than rewritten.
+The WebUI route default is separate from the CLI `.env`. In WebUI settings,
+select provider `openai`, model `gpt-6-astra`, and reasoning effort `medium`.
+Existing saved routes are preserved. Fresh WebUI defaults and built-in Astra
+capability metadata require a runtime binary containing the Astra update;
+changing this checkout's template does not update installed binaries or
+already-published release archives.
+
+For separately launched paper tasks, explicitly set
+`MATHCODE_PAPER_MODEL=gpt-6-astra` and
+`MATHCODE_PAPER_REASONING_EFFORT=medium` in an existing `.env` as needed.
+Lean compiler verification itself does not select a model.
 
 ### WebUI Provider Keys
 
